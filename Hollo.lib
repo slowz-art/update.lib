@@ -814,7 +814,7 @@ function HollowLib:CreateWindow(config)
                 MakeCorner(ColorBtn, 3) MakeStroke(ColorBtn, Theme.BorderBright, 1)
 
                 -- Popup
-                local popupW, popupH = 230, 270
+                local popupW, popupH = 195, 232
                 local PickerPopup = MakeFrame(ScreenGui, UDim2.new(0,popupW,0,popupH), UDim2.new(0,0,0,0), Theme.Background)
                 PickerPopup.Visible = false PickerPopup.ZIndex = 100
                 PickerPopup.BackgroundTransparency = 0.05
@@ -834,7 +834,7 @@ function HollowLib:CreateWindow(config)
                 MakeDraggable(PickerBar, PickerPopup)
 
                 -- SV Square
-                local svSize = 160
+                local svSize = 135
                 local SVFrame = MakeFrame(PickerPopup, UDim2.new(0,svSize,0,svSize), UDim2.new(0,10,0,32), Color3.fromHSV(0,1,1))
                 SVFrame.ZIndex = 101
                 MakeCorner(SVFrame, 6) SVFrame.ClipsDescendants = true
@@ -877,7 +877,7 @@ function HollowLib:CreateWindow(config)
                 SVBtn.BackgroundTransparency = 1 SVBtn.ZIndex = 104
 
                 -- Hue bar (vertical, right side)
-                local HueBar = MakeFrame(PickerPopup, UDim2.new(0,20,0,svSize), UDim2.new(0,svSize+16,0,32), Color3.new(1,1,1))
+                local HueBar = MakeFrame(PickerPopup, UDim2.new(0,18,0,svSize), UDim2.new(0,svSize+14,0,32), Color3.new(1,1,1))
                 HueBar.ZIndex = 101
                 MakeCorner(HueBar, 4) HueBar.ClipsDescendants = true
 
@@ -903,20 +903,20 @@ function HollowLib:CreateWindow(config)
                 HueBtn.BackgroundTransparency = 1 HueBtn.ZIndex = 105
 
                 -- Hex + RGB display
-                local HexRow = MakeFrame(PickerPopup, UDim2.new(0,popupW-20,0,22), UDim2.new(0,10,0,svSize+38), Theme.DropBG)
+                local HexRow = MakeFrame(PickerPopup, UDim2.new(0,popupW-20,0,20), UDim2.new(0,10,0,svSize+36), Theme.DropBG)
                 HexRow.ZIndex = 101
-                MakeCorner(HexRow, 5) MakeStroke(HexRow, Theme.Border, 1)
+                MakeCorner(HexRow, 4) MakeStroke(HexRow, Theme.Border, 1)
 
-                local HexLabel = MakeLabel(HexRow, "#ffffff", 10, Theme.Text, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
+                local HexLabel = MakeLabel(HexRow, "#ffffff", 9, Theme.Text, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
                 HexLabel.Size = UDim2.new(0.45,0,1,0) HexLabel.ZIndex = 102
                 HexLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-                local RGBLabel = MakeLabel(HexRow, "255, 255, 255", 10, Theme.TextDim, Enum.Font.Gotham, Enum.TextXAlignment.Center)
+                local RGBLabel = MakeLabel(HexRow, "255, 255, 255", 9, Theme.TextDim, Enum.Font.Gotham, Enum.TextXAlignment.Center)
                 RGBLabel.Size = UDim2.new(0.55,0,1,0) RGBLabel.Position = UDim2.new(0.45,0,0,0)
                 RGBLabel.ZIndex = 102 RGBLabel.TextYAlignment = Enum.TextYAlignment.Center
 
                 -- Preview swatch
-                local PreviewSwatch = MakeFrame(PickerPopup, UDim2.new(0,popupW-20,0,14), UDim2.new(0,10,0,svSize+64), color)
+                local PreviewSwatch = MakeFrame(PickerPopup, UDim2.new(0,popupW-20,0,12), UDim2.new(0,10,0,svSize+60), color)
                 PreviewSwatch.ZIndex = 101
                 MakeCorner(PreviewSwatch, 4) MakeStroke(PreviewSwatch, Theme.Border, 1)
 
