@@ -169,8 +169,8 @@ function HollowLib:CreateWindow(config)
     local LogoImg = Instance.new("ImageLabel")
     LogoImg.Name = "Logo"
     LogoImg.Image = config.Logo or "rbxassetid://87465223885645"
-    LogoImg.Size = UDim2.new(0,56,0,56)
-    LogoImg.Position = UDim2.new(0,2,0.5,-28)
+    LogoImg.Size = UDim2.new(0,42,0,42)
+    LogoImg.Position = UDim2.new(0,4,0.5,-21)
     LogoImg.BackgroundTransparency = 1
     LogoImg.BorderSizePixel = 0
     LogoImg.ScaleType = Enum.ScaleType.Fit
@@ -180,7 +180,7 @@ function HollowLib:CreateWindow(config)
     -- Title
     local TitleLabel = MakeLabel(Topbar, config.Title or "HollowLib", 14, Theme.Text, Enum.Font.GothamBold)
     TitleLabel.Size = UDim2.new(1, isMobile and -140 or -100, 1, 0)
-    TitleLabel.Position = UDim2.new(0, 58, 0, 0) TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
+    TitleLabel.Position = UDim2.new(0, 50, 0, 0) TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
 
     -- Topbar buttons helper
     local topBtnOffset = -30
@@ -205,24 +205,36 @@ function HollowLib:CreateWindow(config)
         task.wait(0.35) ScreenGui:Destroy()
     end)
 
-    -- Mobile only buttons
+    -- Mobile only: floating draggable buttons outside the UI
     if isMobile then
-        local TogBtn, TogL = makeTopBtn("[=]")
-        TogBtn.MouseButton1Click:Connect(function()
+        -- Toggle UI button
+        local TogFloat = MakeButton(ScreenGui, UDim2.new(0,70,0,26), UDim2.new(0,12,1,-76), Theme.Watermark)
+        TogFloat.BackgroundTransparency = 0.3
+        MakeCorner(TogFloat, 8) MakeStroke(TogFloat, Theme.Border, 1)
+        local TogFloatL = MakeLabel(TogFloat, "Toggle UI", 9, Theme.TextDim, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
+        TogFloatL.Size = UDim2.new(1,0,1,0) TogFloatL.TextYAlignment = Enum.TextYAlignment.Center
+        MakeDraggable(TogFloat, TogFloat)
+
+        TogFloat.MouseButton1Click:Connect(function()
             uiVisible = not uiVisible
-            local Content = Main:FindFirstChild("HollowContent")
-            if Content then Content.Visible = uiVisible end
-            Tween(Main, {Size=UDim2.new(0,curW,0,uiVisible and curH or 34)}, 0.25)
-            Tween(TogBtn, {BackgroundColor3 = uiVisible and Theme.Sidebar or Theme.AccentDark}, 0.15)
-            Tween(TogL, {TextColor3 = uiVisible and Theme.TextDim or Theme.Text}, 0.15)
+            Main.Visible = uiVisible
+            Tween(TogFloat, {BackgroundColor3 = uiVisible and Theme.Watermark or Theme.AccentDark}, 0.15)
+            Tween(TogFloatL, {TextColor3 = uiVisible and Theme.TextDim or Theme.Text}, 0.15)
         end)
 
-        local LockBtn, LockL = makeTopBtn("UL")
-        LockBtn.MouseButton1Click:Connect(function()
+        -- Lock UI button
+        local LockFloat = MakeButton(ScreenGui, UDim2.new(0,62,0,26), UDim2.new(0,88,1,-76), Theme.Watermark)
+        LockFloat.BackgroundTransparency = 0.3
+        MakeCorner(LockFloat, 8) MakeStroke(LockFloat, Theme.Border, 1)
+        local LockFloatL = MakeLabel(LockFloat, "Lock UI", 9, Theme.TextDim, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
+        LockFloatL.Size = UDim2.new(1,0,1,0) LockFloatL.TextYAlignment = Enum.TextYAlignment.Center
+        MakeDraggable(LockFloat, LockFloat)
+
+        LockFloat.MouseButton1Click:Connect(function()
             uiLocked = not uiLocked
-            LockL.Text = uiLocked and "LK" or "UL"
-            Tween(LockBtn, {BackgroundColor3 = uiLocked and Theme.AccentDark or Theme.Sidebar}, 0.15)
-            Tween(LockL, {TextColor3 = uiLocked and Theme.Text or Theme.TextDim}, 0.15)
+            Tween(LockFloat, {BackgroundColor3 = uiLocked and Theme.AccentDark or Theme.Watermark}, 0.15)
+            Tween(LockFloatL, {TextColor3 = uiLocked and Theme.Text or Theme.TextDim}, 0.15)
+            LockFloatL.Text = uiLocked and "Locked" or "Lock UI"
             Window:Notify(uiLocked and "UI Locked" or "UI Unlocked", 2)
         end)
     end
@@ -249,21 +261,14 @@ function HollowLib:CreateWindow(config)
     local SideTitle = MakeLabel(Sidebar, "NAVIGATION", 9, Theme.TextDisabled, Enum.Font.GothamBold)
     SideTitle.Size = UDim2.new(1,-20,0,18) SideTitle.Position = UDim2.new(0,12,0,10)
 
-    local TabList = MakeFrame(Sidebar, UDim2.new(1,0,1,-46), UDim2.new(0,0,0,32), Theme.Sidebar)
+    local TabList = MakeFrame(Sidebar, UDim2.new(1,0,1,-32), UDim2.new(0,0,0,32), Theme.Sidebar)
     TabList.BackgroundTransparency = 1
     TabList.ClipsDescendants = true
     MakeList(TabList, 5) MakePadding(TabList, 4, 6, 10, 10)
 
-    -- Player info
-    local PlayerInfo = MakeFrame(Sidebar, UDim2.new(1,0,0,40), UDim2.new(0,0,1,-40), Theme.Sidebar)
-    PlayerInfo.BackgroundTransparency = 1
-    MakeStroke(PlayerInfo, Theme.Border, 1) MakePadding(PlayerInfo, 6, 6, 10, 10)
-    local PlayerAvatar = MakeImage(PlayerInfo, "https://www.roblox.com/headshot-thumbnail/image?userId="..LocalPlayer.UserId.."&width=48&height=48&format=png", UDim2.new(0,22,0,22), UDim2.new(0,0,0.5,-11))
-    MakeCorner(PlayerAvatar, 11)
-    local PlayerName = MakeLabel(PlayerInfo, config.DisplayName or LocalPlayer.DisplayName, 10, Theme.Text, Enum.Font.GothamMedium)
-    PlayerName.Size = UDim2.new(1,-30,0,13) PlayerName.Position = UDim2.new(0,28,0,6)
-    local PlayerUser = MakeLabel(PlayerInfo, "@"..(config.Username or LocalPlayer.Name), 9, Theme.TextDisabled, Enum.Font.Gotham)
-    PlayerUser.Size = UDim2.new(1,-30,0,12) PlayerUser.Position = UDim2.new(0,28,0,20)
+    -- Player name/user stored for API
+    local PlayerName = {Text = config.DisplayName or LocalPlayer.DisplayName}
+    local PlayerUser = {Text = "@"..(config.Username or LocalPlayer.Name)}
 
     -- Tab content area
     local TabContent = MakeFrame(Content, UDim2.new(1,-124,1,0), UDim2.new(0,124,0,0), Theme.Background)
@@ -549,9 +554,9 @@ function HollowLib:CreateWindow(config)
                 local SliderLabel = MakeLabel(Container, cfg.Text or id, 11, Theme.TextDim, Enum.Font.Gotham)
                 SliderLabel.Size = UDim2.new(1,0,0,13)
 
-                -- Track (positioned right below label)
-                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,14), UDim2.new(0,0,0,14), Theme.SliderBG)
-                MakeCorner(SliderBG, 3) MakeStroke(SliderBG, Theme.Border, 1)
+                -- Track (positioned right below label with gap)
+                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,15), UDim2.new(0,0,0,13), Theme.SliderBG)
+                MakeCorner(SliderBG, 4) MakeStroke(SliderBG, Theme.Border, 1)
 
                 local alpha = (value-min)/(max-min)
 
@@ -798,8 +803,8 @@ function HollowLib:CreateWindow(config)
                 local PickerLabel = MakeLabel(Container, cfg.Title or id, 11, Theme.TextDim, Enum.Font.Gotham)
                 PickerLabel.Size = UDim2.new(1,-36,1,0) PickerLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-                local ColorBtn = MakeButton(Container, UDim2.new(0,28,0,14), UDim2.new(1,-30,0.5,-7), color)
-                MakeCorner(ColorBtn, 4) MakeStroke(ColorBtn, Theme.BorderBright, 1)
+                local ColorBtn = MakeButton(Container, UDim2.new(0,22,0,12), UDim2.new(1,-24,0.5,-6), color)
+                MakeCorner(ColorBtn, 3) MakeStroke(ColorBtn, Theme.BorderBright, 1)
 
                 -- Popup
                 local popupW, popupH = 230, 270
