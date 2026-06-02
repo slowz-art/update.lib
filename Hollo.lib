@@ -284,11 +284,25 @@ function HollowLib:CreateWindow(config)
     PlayerInfo.BackgroundTransparency = 1
     MakeStroke(PlayerInfo, Theme.Border, 1)
     MakePadding(PlayerInfo, 6, 6, 10, 10)
-    local PlayerAvatar = MakeImage(PlayerInfo, "https://www.roblox.com/headshot-thumbnail/image?userId="..LocalPlayer.UserId.."&width=48&height=48&format=png", UDim2.new(0,24,0,24), UDim2.new(0,0,0.5,-12))
-    MakeCorner(PlayerAvatar, 12)
+
+    -- Avatar
+    local PlayerAvatar = Instance.new("ImageLabel")
+    PlayerAvatar.Size = UDim2.new(0,26,0,26)
+    PlayerAvatar.Position = UDim2.new(0,0,0.5,-13)
+    PlayerAvatar.BackgroundColor3 = Theme.GroupBG
+    PlayerAvatar.BorderSizePixel = 0
+    PlayerAvatar.Parent = PlayerInfo
+    MakeCorner(PlayerAvatar, 13)
+    pcall(function()
+        PlayerAvatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..LocalPlayer.UserId.."&width=48&height=48&format=png"
+    end)
+
+    -- Name (fixed width, clipped)
     local PlayerName = MakeLabel(PlayerInfo, config.DisplayName or LocalPlayer.DisplayName, 11, Theme.Text, Enum.Font.GothamMedium)
-    PlayerName.Size = UDim2.new(1,-32,1,0) PlayerName.Position = UDim2.new(0,30,0,0)
+    PlayerName.Size = UDim2.new(1,-34,1,0)
+    PlayerName.Position = UDim2.new(0,32,0,0)
     PlayerName.TextYAlignment = Enum.TextYAlignment.Center
+    PlayerName.ClipsDescendants = true
 
     -- Tab content area
     local TabContent = MakeFrame(Content, UDim2.new(1,-124,1,0), UDim2.new(0,124,0,0), Theme.Background)
@@ -1192,6 +1206,59 @@ function HollowLib:CreateWindow(config)
 
                 if cfg.Flag then HollowLib.Flags[cfg.Flag] = Input end
                 return Input
+            end
+
+            -- ADD SEARCH BAR (standalone search input with callback on each keystroke)
+            function Group:AddSearchBar(cfg)
+                local SearchBar = {}
+                local callback = cfg.Callback or function() end
+                local value = ""
+
+                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,22), nil, Theme.ItemBG)
+                Row.BackgroundTransparency = 1
+                MakePadding(Row, 0, 0, 4, 4)
+
+                local SearchIcon = MakeLabel(Row, "?", 11, Theme.TextDisabled, Enum.Font.GothamBold)
+                SearchIcon.Size = UDim2.new(0,14,1,0)
+                SearchIcon.TextXAlignment = Enum.TextXAlignment.Center
+                SearchIcon.TextYAlignment = Enum.TextYAlignment.Center
+
+                local SearchInput = Instance.new("TextBox")
+                SearchInput.Size = UDim2.new(1,-18,0,16)
+                SearchInput.Position = UDim2.new(0,16,0.5,-8)
+                SearchInput.BackgroundColor3 = Theme.SliderBG
+                SearchInput.BackgroundTransparency = 0.3
+                SearchInput.BorderSizePixel = 0
+                SearchInput.Text = ""
+                SearchInput.PlaceholderText = cfg.Placeholder or "type to search..."
+                SearchInput.PlaceholderColor3 = Theme.TextDisabled
+                SearchInput.TextColor3 = Theme.Text
+                SearchInput.Font = Enum.Font.Gotham
+                SearchInput.TextSize = 10
+                SearchInput.ClearTextOnFocus = false
+                SearchInput.Parent = Row
+                MakeCorner(SearchInput, 4) MakeStroke(SearchInput, Theme.Border, 1)
+
+                SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
+                    value = SearchInput.Text
+                    callback(value)
+                end)
+
+                SearchInput.Focused:Connect(function()
+                    Tween(SearchInput, {BackgroundTransparency=0.1}, 0.15)
+                    Tween(SearchIcon, {TextColor3=Theme.Accent}, 0.15)
+                end)
+                SearchInput.FocusLost:Connect(function()
+                    Tween(SearchInput, {BackgroundTransparency=0.3}, 0.15)
+                    Tween(SearchIcon, {TextColor3=Theme.TextDisabled}, 0.15)
+                end)
+
+                function SearchBar:SetValue(v) value = v SearchInput.Text = v end
+                function SearchBar:GetValue() return value end
+                function SearchBar:Clear() value = "" SearchInput.Text = "" end
+
+                if cfg.Flag then HollowLib.Flags[cfg.Flag] = SearchBar end
+                return SearchBar
             end
 
             return Group
