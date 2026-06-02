@@ -466,64 +466,60 @@ function HollowLib:CreateWindow(config)
             ItemContainer.AutomaticSize = Enum.AutomaticSize.Y
             ItemContainer.BackgroundTransparency = 1
             MakeCorner(ItemContainer, Radius.Group) MakePadding(ItemContainer, 6, 8, 6, 6)
-            MakeList(ItemContainer, 8)
+            MakeList(ItemContainer, 2)
 
-            -- ADD TOGGLE
+            -- ADD TOGGLE (Clean checkbox style)
             function Group:AddToggle(id, cfg)
                 local Toggle = {}
                 local state = cfg.Default or false
                 local callback = cfg.Callback or function() end
 
-                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,32), nil, Theme.ItemBG)
+                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,22), nil, Theme.ItemBG)
                 Row.BackgroundTransparency = 1
-                MakeCorner(Row, Radius.Item) MakePadding(Row, 0, 0, 10, 10)
+                MakePadding(Row, 0, 0, 6, 6)
 
                 local RowBtn = MakeButton(Row, UDim2.new(1,0,1,0), nil, Theme.ItemBG)
                 RowBtn.BackgroundTransparency = 1
 
-                local ToggleLabel = MakeLabel(Row, cfg.Text or id, 12, Theme.Text, Enum.Font.GothamMedium)
-                ToggleLabel.Size = UDim2.new(1,-50,1,0) ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
+                -- Checkbox box
+                local CheckBox = MakeFrame(Row, UDim2.new(0,14,0,14), UDim2.new(0,0,0.5,-7), Theme.Toggle)
+                MakeCorner(CheckBox, 3)
+                local CheckStroke = MakeStroke(CheckBox, Theme.Border, 1)
 
-                -- Bigger pill toggle
-                local ToggleBG = MakeFrame(Row, UDim2.new(0,40,0,22), UDim2.new(1,-42,0.5,-11), Theme.Toggle)
-                MakeCorner(ToggleBG, 11)
-                local ToggleStroke = MakeStroke(ToggleBG, Theme.Border, 1.5)
+                -- Checkmark text
+                local CheckMark = MakeLabel(CheckBox, "", 10, Theme.Text, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
+                CheckMark.Size = UDim2.new(1,0,1,0)
+                CheckMark.TextYAlignment = Enum.TextYAlignment.Center
 
-                -- Circle with shadow stroke
-                local ToggleCircle = MakeFrame(ToggleBG, UDim2.new(0,16,0,16), UDim2.new(0,3,0.5,-8), Theme.TextDisabled)
-                MakeCorner(ToggleCircle, 8)
-                local CircleStroke = Instance.new("UIStroke")
-                CircleStroke.Color = Theme.Border CircleStroke.Thickness = 1
-                CircleStroke.Transparency = 0.5 CircleStroke.Parent = ToggleCircle
+                local ToggleLabel = MakeLabel(Row, cfg.Text or id, 12, Theme.TextDim, Enum.Font.Gotham)
+                ToggleLabel.Size = UDim2.new(1,-22,1,0)
+                ToggleLabel.Position = UDim2.new(0,20,0,0)
+                ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
 
                 local function SetState(newState, skipCb)
                     state = newState
                     if state then
-                        Tween(ToggleBG, {BackgroundColor3=Theme.ToggleOn}, 0.25, Enum.EasingStyle.Quint)
-                        Tween(ToggleStroke, {Color=Theme.Accent, Transparency=0.3}, 0.25)
-                        Tween(ToggleCircle, {Position=UDim2.new(1,-19,0.5,-8), BackgroundColor3=Theme.Text, Size=UDim2.new(0,16,0,16)}, 0.3, Enum.EasingStyle.Back)
-                        Tween(CircleStroke, {Color=Theme.Accent, Transparency=0.2}, 0.25)
+                        Tween(CheckBox, {BackgroundColor3=Theme.Accent}, 0.15)
+                        Tween(CheckStroke, {Color=Theme.Accent}, 0.15)
+                        CheckMark.Text = "v"
+                        Tween(ToggleLabel, {TextColor3=Theme.Text}, 0.15)
                     else
-                        Tween(ToggleBG, {BackgroundColor3=Theme.Toggle}, 0.25, Enum.EasingStyle.Quint)
-                        Tween(ToggleStroke, {Color=Theme.Border, Transparency=0}, 0.25)
-                        Tween(ToggleCircle, {Position=UDim2.new(0,3,0.5,-8), BackgroundColor3=Theme.TextDisabled, Size=UDim2.new(0,16,0,16)}, 0.3, Enum.EasingStyle.Back)
-                        Tween(CircleStroke, {Color=Theme.Border, Transparency=0.5}, 0.25)
+                        Tween(CheckBox, {BackgroundColor3=Theme.Toggle}, 0.15)
+                        Tween(CheckStroke, {Color=Theme.Border}, 0.15)
+                        CheckMark.Text = ""
+                        Tween(ToggleLabel, {TextColor3=Theme.TextDim}, 0.15)
                     end
                     if not skipCb then callback(state) end
                 end
 
-                -- Squish on click
-                RowBtn.MouseButton1Down:Connect(function()
-                    Tween(ToggleCircle, {Size=UDim2.new(0,18,0,14)}, 0.1, Enum.EasingStyle.Quart)
-                end)
-                RowBtn.MouseButton1Up:Connect(function()
-                    Tween(ToggleCircle, {Size=UDim2.new(0,16,0,16)}, 0.15, Enum.EasingStyle.Back)
-                end)
-
                 SetState(state, true)
                 RowBtn.MouseButton1Click:Connect(function() SetState(not state) end)
-                RowBtn.MouseEnter:Connect(function() Tween(ToggleStroke, {Transparency=0}, 0.15) end)
-                RowBtn.MouseLeave:Connect(function() if not state then Tween(ToggleStroke, {Transparency=0}, 0.15) end end)
+                RowBtn.MouseEnter:Connect(function()
+                    if not state then Tween(CheckStroke, {Color=Theme.TextDisabled}, 0.1) end
+                end)
+                RowBtn.MouseLeave:Connect(function()
+                    if not state then Tween(CheckStroke, {Color=Theme.Border}, 0.1) end
+                end)
 
                 function Toggle:SetValue(v) SetState(v, false) end
                 function Toggle:GetValue() return state end
@@ -533,7 +529,7 @@ function HollowLib:CreateWindow(config)
                 return Toggle
             end
 
-            -- ADD SLIDER
+            -- ADD SLIDER (Thick filled bar with value/max overlay)
             function Group:AddSlider(id, cfg)
                 local Slider = {}
                 local min = cfg.Min or 0 local max = cfg.Max or 100
@@ -542,38 +538,32 @@ function HollowLib:CreateWindow(config)
                 local callback = cfg.Callback or function() end
                 local dragging = false
 
-                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,48), nil, Theme.ItemBG)
+                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,36), nil, Theme.ItemBG)
                 Container.BackgroundTransparency = 1
-                MakeCorner(Container, Radius.Item) MakePadding(Container, 8, 8, 10, 10)
+                MakePadding(Container, 2, 2, 6, 6)
 
-                local TopRow = MakeFrame(Container, UDim2.new(1,0,0,16), nil, Theme.ItemBG)
-                TopRow.BackgroundTransparency = 1
+                -- Label
+                local SliderLabel = MakeLabel(Container, cfg.Text or id, 12, Theme.TextDim, Enum.Font.Gotham)
+                SliderLabel.Size = UDim2.new(1,0,0,14)
 
-                local SliderLabel = MakeLabel(TopRow, cfg.Text or id, 12, Theme.Text, Enum.Font.GothamMedium)
-                SliderLabel.Size = UDim2.new(0.65,0,1,0)
-
-                local ValueLabel = MakeLabel(TopRow, tostring(value)..suffix, 11, Theme.Accent, Enum.Font.GothamBold, Enum.TextXAlignment.Right)
-                ValueLabel.Size = UDim2.new(0.35,0,1,0) ValueLabel.Position = UDim2.new(0.65,0,0,0)
-
-                -- Thicker track
-                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,8), UDim2.new(0,0,1,-12), Theme.SliderBG)
+                -- Thick track (matches reference style)
+                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,16), UDim2.new(0,0,1,-4), Theme.SliderBG)
                 MakeCorner(SliderBG, 4) MakeStroke(SliderBG, Theme.Border, 1)
 
                 local alpha = (value-min)/(max-min)
 
-                -- Glowing fill
+                -- Thick fill bar
                 local SliderFill = MakeFrame(SliderBG, UDim2.new(alpha,0,1,0), nil, Theme.SliderFill)
                 MakeCorner(SliderFill, 4)
 
-                -- Bigger knob with accent glow
-                local SliderKnob = MakeFrame(SliderBG, UDim2.new(0,14,0,14), UDim2.new(alpha,-7,0.5,-7), Theme.Text)
-                MakeCorner(SliderKnob, 7)
-                local KnobStroke = Instance.new("UIStroke")
-                KnobStroke.Color = Theme.Accent KnobStroke.Thickness = 1.5
-                KnobStroke.Transparency = 0.3 KnobStroke.Parent = SliderKnob
+                -- Value text overlaid on bar (value/max format)
+                local ValueLabel = MakeLabel(SliderBG, tostring(value) .. suffix .. "/" .. tostring(max) .. suffix, 10, Theme.Text, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
+                ValueLabel.Size = UDim2.new(1,0,1,0)
+                ValueLabel.TextYAlignment = Enum.TextYAlignment.Center
+                ValueLabel.ZIndex = 3
 
-                local SliderBtn = MakeButton(SliderBG, UDim2.new(1,0,1,14), UDim2.new(0,0,0,-7), Theme.Background)
-                SliderBtn.BackgroundTransparency = 1 SliderBtn.ZIndex = 2
+                local SliderBtn = MakeButton(SliderBG, UDim2.new(1,0,1,10), UDim2.new(0,0,0,-5), Theme.Background)
+                SliderBtn.BackgroundTransparency = 1 SliderBtn.ZIndex = 4
 
                 local function UpdateSlider(input)
                     local rel = math.clamp((input.Position.X - SliderBG.AbsolutePosition.X) / SliderBG.AbsoluteSize.X, 0, 1)
@@ -582,39 +572,26 @@ function HollowLib:CreateWindow(config)
                     value = math.clamp(value, min, max)
                     local a = (value-min)/(max-min)
                     Tween(SliderFill, {Size=UDim2.new(a,0,1,0)}, 0.06, Enum.EasingStyle.Quart)
-                    Tween(SliderKnob, {Position=UDim2.new(a,-7,0.5,-7)}, 0.06, Enum.EasingStyle.Quart)
-                    ValueLabel.Text = tostring(value)..suffix
+                    ValueLabel.Text = tostring(value) .. suffix .. "/" .. tostring(max) .. suffix
                     callback(value)
                 end
 
-                -- Knob grows when dragging
-                SliderBtn.MouseButton1Down:Connect(function()
-                    dragging = true
-                    Tween(SliderKnob, {Size=UDim2.new(0,16,0,16)}, 0.1, Enum.EasingStyle.Back)
-                    Tween(KnobStroke, {Thickness=2, Transparency=0}, 0.1)
-                end)
+                SliderBtn.MouseButton1Down:Connect(function() dragging = true end)
                 SliderBtn.TouchTap:Connect(function(touches) if touches[1] then UpdateSlider(touches[1]) end end)
                 UserInputService.InputChanged:Connect(function(i)
                     if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then UpdateSlider(i) end
                 end)
                 UserInputService.InputEnded:Connect(function(i)
                     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-                        if dragging then
-                            dragging = false
-                            Tween(SliderKnob, {Size=UDim2.new(0,14,0,14)}, 0.2, Enum.EasingStyle.Back)
-                            Tween(KnobStroke, {Thickness=1.5, Transparency=0.3}, 0.2)
-                        end
+                        dragging = false
                     end
                 end)
-
-                Container.MouseEnter:Connect(function() Tween(KnobStroke, {Transparency=0.1}, 0.15) end)
-                Container.MouseLeave:Connect(function() if not dragging then Tween(KnobStroke, {Transparency=0.3}, 0.15) end end)
 
                 function Slider:SetValue(v)
                     value = math.clamp(v,min,max) local a=(value-min)/(max-min)
                     Tween(SliderFill,{Size=UDim2.new(a,0,1,0)},0.15)
-                    Tween(SliderKnob,{Position=UDim2.new(a,-7,0.5,-7)},0.15)
-                    ValueLabel.Text=tostring(value)..suffix callback(value)
+                    ValueLabel.Text = tostring(value) .. suffix .. "/" .. tostring(max) .. suffix
+                    callback(value)
                 end
                 function Slider:GetValue() return value end
 
@@ -622,40 +599,34 @@ function HollowLib:CreateWindow(config)
                 return Slider
             end
 
-            -- ADD BUTTON
+            -- ADD BUTTON (Clean minimal)
             function Group:AddButton(cfg)
                 local text = cfg.Text or "Button"
                 local callback = cfg.Func or cfg.Callback or function() end
 
-                local Btn = MakeButton(ItemContainer, UDim2.new(1,0,0,34), nil, Theme.ItemBG)
+                local Btn = MakeButton(ItemContainer, UDim2.new(1,0,0,24), nil, Theme.ItemBG)
                 Btn.BackgroundTransparency = 1
-                MakeCorner(Btn, Radius.Item)
-                local BtnStroke = MakeStroke(Btn, Theme.Border, 1)
+                MakePadding(Btn, 0, 0, 6, 6)
 
-                local BtnLabel = MakeLabel(Btn, text, 12, Theme.Text, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
+                local BtnLabel = MakeLabel(Btn, text, 12, Theme.TextDim, Enum.Font.Gotham, Enum.TextXAlignment.Center)
                 BtnLabel.Size = UDim2.new(1,0,1,0) BtnLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-                -- Bottom accent line (hidden, shows on hover)
-                local AccentBottom = MakeFrame(Btn, UDim2.new(0,0,0,2), UDim2.new(0.5,0,1,-3), Theme.Accent)
-                MakeCorner(AccentBottom, 1) AccentBottom.AnchorPoint = Vector2.new(0.5, 0)
+                -- Underline
+                local BtnLine = MakeFrame(Btn, UDim2.new(1,-12,0,1), UDim2.new(0,6,1,-2), Theme.Border)
 
                 Btn.MouseEnter:Connect(function()
-                    Tween(BtnStroke, {Color=Theme.BorderBright, Transparency=0}, 0.15)
-                    Tween(BtnLabel, {TextColor3=Theme.Accent}, 0.15)
-                    Tween(AccentBottom, {Size=UDim2.new(0.5,0,0,2)}, 0.2, Enum.EasingStyle.Quint)
+                    Tween(BtnLabel, {TextColor3=Theme.Accent}, 0.1)
+                    Tween(BtnLine, {BackgroundColor3=Theme.Accent}, 0.1)
                 end)
                 Btn.MouseLeave:Connect(function()
-                    Tween(BtnStroke, {Color=Theme.Border, Transparency=0}, 0.15)
-                    Tween(BtnLabel, {TextColor3=Theme.Text}, 0.15)
-                    Tween(AccentBottom, {Size=UDim2.new(0,0,0,2)}, 0.2, Enum.EasingStyle.Quint)
+                    Tween(BtnLabel, {TextColor3=Theme.TextDim}, 0.1)
+                    Tween(BtnLine, {BackgroundColor3=Theme.Border}, 0.1)
                 end)
                 Btn.MouseButton1Down:Connect(function()
-                    Tween(BtnStroke, {Color=Theme.Accent, Transparency=0.2}, 0.08)
-                    Tween(BtnLabel, {TextSize=11}, 0.08, Enum.EasingStyle.Quart)
+                    Tween(BtnLabel, {TextColor3=Theme.Text}, 0.05)
                 end)
                 Btn.MouseButton1Up:Connect(function()
-                    Tween(BtnStroke, {Color=Theme.BorderBright, Transparency=0}, 0.15)
-                    Tween(BtnLabel, {TextSize=12}, 0.15, Enum.EasingStyle.Back)
+                    Tween(BtnLabel, {TextColor3=Theme.Accent}, 0.1)
                 end)
                 Btn.MouseButton1Click:Connect(callback)
 
@@ -763,9 +734,9 @@ function HollowLib:CreateWindow(config)
 
             -- ADD LABEL
             function Group:AddLabel(text, richText)
-                local Label = MakeFrame(ItemContainer, UDim2.new(1,0,0,28), nil, Theme.ItemBG)
+                local Label = MakeFrame(ItemContainer, UDim2.new(1,0,0,18), nil, Theme.ItemBG)
                 Label.BackgroundTransparency = 1
-                MakeCorner(Label, Radius.Item) MakePadding(Label, 0, 0, 10, 10)
+                MakePadding(Label, 0, 0, 6, 6)
                 local LabelText = MakeLabel(Label, text, 11, Theme.TextDim, Enum.Font.Gotham)
                 LabelText.Size = UDim2.new(1,0,1,0) LabelText.TextYAlignment = Enum.TextYAlignment.Center
                 LabelText.RichText = richText or false LabelText.TextWrapped = true
