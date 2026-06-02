@@ -134,6 +134,19 @@ function HollowLib:CreateWindow(config)
     local curW, curH = 580, 400
     local minW, minH = 380, 280
 
+    -- Custom accent color
+    if config.Accent then
+        Theme.Accent = config.Accent
+        Theme.AccentDark = Color3.fromRGB(
+            math.floor(config.Accent.R * 180),
+            math.floor(config.Accent.G * 180),
+            math.floor(config.Accent.B * 180)
+        )
+        Theme.ToggleOn = config.Accent
+        Theme.SliderFill = config.Accent
+        Theme.TabActive = config.Accent
+    end
+
     -- Main Frame
     local Main = MakeFrame(ScreenGui, UDim2.new(0,curW,0,curH), UDim2.new(0.5,-curW/2,0.5,-curH/2), Theme.Background)
     Main.Name = "HollowWindow" Main.ClipsDescendants = false
@@ -283,6 +296,7 @@ function HollowLib:CreateWindow(config)
     TabContent.ClipsDescendants = true
 
     -- ===== WATERMARK =====
+    local wmName = config.WatermarkName or "hollowoodz"
     local Watermark = MakeFrame(ScreenGui, UDim2.new(0, isMobile and 170 or 240, 0, 28), UDim2.new(0,12,1,-40), Theme.Watermark)
     Watermark.BackgroundTransparency = 0.3
     MakeCorner(Watermark, 10) 
@@ -293,12 +307,11 @@ function HollowLib:CreateWindow(config)
     local WMBar = MakeFrame(Watermark, UDim2.new(0,3,0,16), UDim2.new(0,6,0.5,-8), Theme.Accent)
     MakeCorner(WMBar, 2)
 
-    MakeDraggable(Watermark, Watermark)
-
     -- Name label
-    local WMName = MakeLabel(Watermark, "hollowoodz", 10, Theme.Text, Enum.Font.GothamBold)
+    local WMName = MakeLabel(Watermark, wmName, 10, Theme.Text, Enum.Font.GothamBold)
     WMName.Size = UDim2.new(0,72,1,0) WMName.Position = UDim2.new(0,14,0,0)
     WMName.TextYAlignment = Enum.TextYAlignment.Center
+    WMName.AutomaticSize = Enum.AutomaticSize.X
 
     -- Separator dot
     local WMDot1 = MakeFrame(Watermark, UDim2.new(0,3,0,3), UDim2.new(0,88,0.5,-1), Theme.TextDisabled)
@@ -355,6 +368,7 @@ function HollowLib:CreateWindow(config)
     function Window:AddTab(name, icon)
         local Tab = {}
         local isActive = false
+        local hasImageIcon = icon and (type(icon) == "number" or tostring(icon):find("rbxassetid"))
 
         local TabBtn = MakeButton(TabList, UDim2.new(1,0,0,30), nil, Theme.TabInactive)
         TabBtn.BackgroundTransparency = 1
@@ -363,17 +377,36 @@ function HollowLib:CreateWindow(config)
         local TabIndicator = MakeFrame(TabBtn, UDim2.new(0,3,0,10), UDim2.new(0,0,0.5,-5), Theme.Accent)
         TabIndicator.BackgroundTransparency = 1 MakeCorner(TabIndicator, 2)
 
-        local TabIcon = MakeLabel(TabBtn, icon or "", 12, Theme.TextDim, Enum.Font.GothamMedium)
-        TabIcon.Size = UDim2.new(0,18,1,0) TabIcon.Position = UDim2.new(0,7,0,0)
-        TabIcon.TextXAlignment = Enum.TextXAlignment.Center
+        -- Icon: ImageLabel if texture ID, TextLabel otherwise
+        local TabIcon
+        if hasImageIcon then
+            TabIcon = Instance.new("ImageLabel")
+            TabIcon.Size = UDim2.new(0,16,0,16)
+            TabIcon.Position = UDim2.new(0,8,0.5,-8)
+            TabIcon.BackgroundTransparency = 1
+            TabIcon.Image = type(icon) == "number" and ("rbxassetid://"..tostring(icon)) or tostring(icon)
+            TabIcon.ImageColor3 = Theme.TextDim
+            TabIcon.ScaleType = Enum.ScaleType.Fit
+            TabIcon.Parent = TabBtn
+        else
+            TabIcon = MakeLabel(TabBtn, icon or "", 12, Theme.TextDim, Enum.Font.GothamMedium)
+            TabIcon.Size = UDim2.new(0,18,1,0) TabIcon.Position = UDim2.new(0,7,0,0)
+            TabIcon.TextXAlignment = Enum.TextXAlignment.Center
+        end
 
         local TabLabel = MakeLabel(TabBtn, name, 11, Theme.TextDim, Enum.Font.GothamMedium)
         TabLabel.Size = UDim2.new(1,-32,1,0) TabLabel.Position = UDim2.new(0,26,0,0)
 
-        -- Tab page with TWO COLUMN layout
-        local TabPage = MakeFrame(TabContent, UDim2.new(1,0,1,0), nil, Theme.Background)
+        -- Tab page with TWO COLUMN layout (CanvasGroup for smooth fade)
+        local TabPage = Instance.new("CanvasGroup")
+        TabPage.Size = UDim2.new(1,0,1,0)
+        TabPage.Position = UDim2.new(0,0,0,0)
         TabPage.BackgroundTransparency = 1
-        TabPage.Visible = false TabPage.ClipsDescendants = true
+        TabPage.BorderSizePixel = 0
+        TabPage.GroupTransparency = 0
+        TabPage.Visible = false
+        TabPage.ClipsDescendants = true
+        TabPage.Parent = TabContent
 
         local TabScroll = Instance.new("ScrollingFrame")
         TabScroll.Size = UDim2.new(1,0,1,0)
@@ -423,23 +456,29 @@ function HollowLib:CreateWindow(config)
         WrapLayout.SortOrder = Enum.SortOrder.LayoutOrder
         WrapLayout.Parent = InnerWrap
 
+        local iconColorProp = hasImageIcon and "ImageColor3" or "TextColor3"
+
         local function Activate()
             if ActiveTab and ActiveTab ~= Tab then ActiveTab:_deactivate() end
             isActive = true ActiveTab = Tab
             TabPage.Visible = true
+            TabPage.GroupTransparency = 1
+            Tween(TabPage, {GroupTransparency=0}, 0.2, Enum.EasingStyle.Quint)
             TabScroll.CanvasPosition = Vector2.new(0, 0)
             Tween(TabBtn, {BackgroundColor3=Theme.TabHover}, 0.2, Enum.EasingStyle.Quint)
             Tween(TabLabel, {TextColor3=Theme.Text}, 0.2, Enum.EasingStyle.Quint)
-            Tween(TabIcon, {TextColor3=Theme.Accent}, 0.2, Enum.EasingStyle.Quint)
+            Tween(TabIcon, {[iconColorProp]=Theme.Accent}, 0.2, Enum.EasingStyle.Quint)
             Tween(TabIndicator, {BackgroundTransparency=0, Size=UDim2.new(0,3,0,18)}, 0.25, Enum.EasingStyle.Back)
         end
 
         function Tab:_deactivate()
-            isActive = false TabPage.Visible = false
+            isActive = false
             Tween(TabBtn, {BackgroundColor3=Theme.TabInactive}, 0.2, Enum.EasingStyle.Quint)
             Tween(TabLabel, {TextColor3=Theme.TextDim}, 0.2, Enum.EasingStyle.Quint)
-            Tween(TabIcon, {TextColor3=Theme.TextDim}, 0.2, Enum.EasingStyle.Quint)
+            Tween(TabIcon, {[iconColorProp]=Theme.TextDim}, 0.2, Enum.EasingStyle.Quint)
             Tween(TabIndicator, {BackgroundTransparency=1, Size=UDim2.new(0,3,0,10)}, 0.2, Enum.EasingStyle.Quint)
+            Tween(TabPage, {GroupTransparency=1}, 0.15, Enum.EasingStyle.Quint)
+            task.delay(0.15, function() if not isActive then TabPage.Visible = false end end)
         end
 
         TabBtn.MouseEnter:Connect(function()
@@ -684,11 +723,37 @@ function HollowLib:CreateWindow(config)
                 DropArrow.ScaleType = Enum.ScaleType.Fit
                 DropArrow.Parent = Header
 
+                -- Search bar (shows when 5+ items)
+                local hasSearch = #values >= 5
+                local searchFilter = ""
+                local SearchBox
+                if hasSearch then
+                    SearchBox = Instance.new("TextBox")
+                    SearchBox.Size = UDim2.new(1,0,0,18)
+                    SearchBox.Position = UDim2.new(0,0,0,28)
+                    SearchBox.BackgroundColor3 = Theme.SliderBG
+                    SearchBox.BackgroundTransparency = 0.3
+                    SearchBox.BorderSizePixel = 0
+                    SearchBox.Text = ""
+                    SearchBox.PlaceholderText = "Search..."
+                    SearchBox.PlaceholderColor3 = Theme.TextDisabled
+                    SearchBox.TextColor3 = Theme.Text
+                    SearchBox.Font = Enum.Font.Gotham
+                    SearchBox.TextSize = 9
+                    SearchBox.ClearTextOnFocus = false
+                    SearchBox.Visible = false
+                    SearchBox.ZIndex = 10
+                    SearchBox.Parent = Container
+                    MakeCorner(SearchBox, 3)
+                    MakePadding(SearchBox, 0, 0, 6, 6)
+                end
+
                 -- Scrollable option list
+                local searchH = hasSearch and 20 or 0
                 local listH = math.min(#values, maxVisible) * 20 + 6
                 local OptionScroll = Instance.new("ScrollingFrame")
                 OptionScroll.Size = UDim2.new(1,0,0,listH)
-                OptionScroll.Position = UDim2.new(0,0,0,28)
+                OptionScroll.Position = UDim2.new(0,0,0,28 + searchH)
                 OptionScroll.BackgroundColor3 = Theme.DropOpen
                 OptionScroll.BackgroundTransparency = 0.1
                 OptionScroll.BorderSizePixel = 0
@@ -706,45 +771,61 @@ function HollowLib:CreateWindow(config)
                 local function CloseDropdown()
                     open = false
                     OptionScroll.Visible = false
+                    if SearchBox then SearchBox.Visible = false SearchBox.Text = "" searchFilter = "" end
                     Tween(DropArrow, {Rotation=0}, 0.2)
                     DropArrow.ImageColor3 = Theme.TextDim
                 end
 
-                local function BuildOptions()
+                local function BuildOptions(filter)
+                    filter = filter or ""
                     for _, c in pairs(OptionScroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+                    local count = 0
                     for _, val in ipairs(values) do
-                        local isSel = (multi and multiSelected[val]) or (not multi and selected == val)
-                        local Opt = MakeButton(OptionScroll, UDim2.new(1,0,0,18), nil, isSel and Theme.AccentDark or Theme.DropBG)
-                        Opt.BackgroundTransparency = isSel and 0.3 or 1
-                        MakeCorner(Opt, 3)
-                        local OptLabel = MakeLabel(Opt, tostring(val), 10, isSel and Theme.Text or Theme.TextDim, Enum.Font.Gotham)
-                        OptLabel.Size = UDim2.new(1,-6,1,0) OptLabel.Position = UDim2.new(0,6,0,0)
-                        OptLabel.TextYAlignment = Enum.TextYAlignment.Center
+                        local str = tostring(val):lower()
+                        if filter == "" or str:find(filter:lower(), 1, true) then
+                            count = count + 1
+                            local isSel = (multi and multiSelected[val]) or (not multi and selected == val)
+                            local Opt = MakeButton(OptionScroll, UDim2.new(1,0,0,18), nil, isSel and Theme.AccentDark or Theme.DropBG)
+                            Opt.BackgroundTransparency = isSel and 0.3 or 1
+                            MakeCorner(Opt, 3)
+                            local OptLabel = MakeLabel(Opt, tostring(val), 10, isSel and Theme.Text or Theme.TextDim, Enum.Font.Gotham)
+                            OptLabel.Size = UDim2.new(1,-6,1,0) OptLabel.Position = UDim2.new(0,6,0,0)
+                            OptLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-                        Opt.MouseEnter:Connect(function() Tween(OptLabel,{TextColor3=Theme.Text},0.1) end)
-                        Opt.MouseLeave:Connect(function() if not isSel then Tween(OptLabel,{TextColor3=Theme.TextDim},0.1) end end)
-                        Opt.MouseButton1Click:Connect(function()
-                            if multi then
-                                multiSelected[val] = not multiSelected[val]
-                                local result = {} for k,v in pairs(multiSelected) do if v then table.insert(result,k) end end
-                                SelectedLabel.Text = #result>0 and table.concat(result,", ") or "None"
-                                callback(result)
-                            else
-                                selected = val SelectedLabel.Text = tostring(val) callback(val)
-                                CloseDropdown()
-                            end
-                            BuildOptions()
-                        end)
+                            Opt.MouseEnter:Connect(function() Tween(OptLabel,{TextColor3=Theme.Text},0.1) end)
+                            Opt.MouseLeave:Connect(function() if not isSel then Tween(OptLabel,{TextColor3=Theme.TextDim},0.1) end end)
+                            Opt.MouseButton1Click:Connect(function()
+                                if multi then
+                                    multiSelected[val] = not multiSelected[val]
+                                    local result = {} for k,v in pairs(multiSelected) do if v then table.insert(result,k) end end
+                                    SelectedLabel.Text = #result>0 and table.concat(result,", ") or "None"
+                                    callback(result)
+                                else
+                                    selected = val SelectedLabel.Text = tostring(val) callback(val)
+                                    CloseDropdown()
+                                end
+                                BuildOptions(searchFilter)
+                            end)
+                        end
                     end
-                    listH = math.min(#values, maxVisible) * 20 + 6
+                    listH = math.min(count, maxVisible) * 20 + 6
                     OptionScroll.Size = UDim2.new(1,0,0,listH)
                 end
 
+                if SearchBox then
+                    SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+                        searchFilter = SearchBox.Text
+                        BuildOptions(searchFilter)
+                    end)
+                end
+
                 Header.MouseButton1Click:Connect(function()
-                    open = not open OptionScroll.Visible = open
+                    open = not open
+                    OptionScroll.Visible = open
+                    if SearchBox then SearchBox.Visible = open end
                     Tween(DropArrow, {Rotation=open and 180 or 0}, 0.2)
                     DropArrow.ImageColor3 = open and Theme.Accent or Theme.TextDim
-                    if open then BuildOptions() end
+                    if open then BuildOptions(searchFilter) end
                 end)
                 BuildOptions()
 
@@ -760,7 +841,13 @@ function HollowLib:CreateWindow(config)
                             local oSz = OptionScroll.AbsoluteSize
                             local inHeader = pos.X >= hAbs.X and pos.X <= hAbs.X+hSz.X and pos.Y >= hAbs.Y and pos.Y <= hAbs.Y+hSz.Y
                             local inList = pos.X >= oAbs.X and pos.X <= oAbs.X+oSz.X and pos.Y >= oAbs.Y and pos.Y <= oAbs.Y+oSz.Y
-                            if not inHeader and not inList then CloseDropdown() end
+                            local inSearch = false
+                            if SearchBox and SearchBox.Visible then
+                                local sAbs = SearchBox.AbsolutePosition
+                                local sSz = SearchBox.AbsoluteSize
+                                inSearch = pos.X >= sAbs.X and pos.X <= sAbs.X+sSz.X and pos.Y >= sAbs.Y and pos.Y <= sAbs.Y+sSz.Y
+                            end
+                            if not inHeader and not inList and not inSearch then CloseDropdown() end
                         end)
                     end
                 end)
@@ -1182,8 +1269,16 @@ function HollowLib:CreateWindow(config)
     function Window:SetWatermark(text) WMName.Text = text end
     function Window:SetWatermarkVisibility(visible) Watermark.Visible = visible end
     function Window:SetDisplayName(name) PlayerName.Text = name end
-    function Window:SetUsername(name) end -- no username display, kept for compatibility
+    function Window:SetUsername(name) end
     function Window:SetLogo(textureId) LogoImg.Image = "rbxassetid://"..tostring(textureId) end
+    function Window:SetAccent(color)
+        Theme.Accent = color
+        Theme.AccentDark = Color3.fromRGB(math.floor(color.R*180), math.floor(color.G*180), math.floor(color.B*180))
+        Theme.ToggleOn = color
+        Theme.SliderFill = color
+        Theme.TabActive = color
+        WMBar.BackgroundColor3 = color
+    end
     function Window:Unload()
         ScreenGui:Destroy()
         if getgenv()._HollowUnload then getgenv()._HollowUnload() end
