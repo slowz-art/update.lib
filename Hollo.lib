@@ -218,10 +218,10 @@ function HollowLib:CreateWindow(config)
         task.wait(0.35) ScreenGui:Destroy()
     end)
 
-    -- Mobile only: floating draggable buttons outside the UI
+    -- Mobile only: floating draggable buttons at top
     if isMobile then
         -- Toggle UI button
-        local TogFloat = MakeButton(ScreenGui, UDim2.new(0,70,0,26), UDim2.new(0,12,1,-76), Theme.Watermark)
+        local TogFloat = MakeButton(ScreenGui, UDim2.new(0,70,0,26), UDim2.new(1,-146,0,12), Theme.Watermark)
         TogFloat.BackgroundTransparency = 0.3
         MakeCorner(TogFloat, 8) MakeStroke(TogFloat, Theme.Border, 1)
         local TogFloatL = MakeLabel(TogFloat, "Toggle UI", 9, Theme.TextDim, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
@@ -236,7 +236,7 @@ function HollowLib:CreateWindow(config)
         end)
 
         -- Lock UI button
-        local LockFloat = MakeButton(ScreenGui, UDim2.new(0,62,0,26), UDim2.new(0,88,1,-76), Theme.Watermark)
+        local LockFloat = MakeButton(ScreenGui, UDim2.new(0,62,0,26), UDim2.new(1,-72,0,12), Theme.Watermark)
         LockFloat.BackgroundTransparency = 0.3
         MakeCorner(LockFloat, 8) MakeStroke(LockFloat, Theme.Border, 1)
         local LockFloatL = MakeLabel(LockFloat, "Lock UI", 9, Theme.TextDim, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
@@ -248,7 +248,6 @@ function HollowLib:CreateWindow(config)
             Tween(LockFloat, {BackgroundColor3 = uiLocked and Theme.AccentDark or Theme.Watermark}, 0.15)
             Tween(LockFloatL, {TextColor3 = uiLocked and Theme.Text or Theme.TextDim}, 0.15)
             LockFloatL.Text = uiLocked and "Locked" or "Lock UI"
-            Window:Notify(uiLocked and "UI Locked" or "UI Unlocked", 2)
         end)
     end
 
@@ -265,7 +264,11 @@ function HollowLib:CreateWindow(config)
     MakeCorner(Content, Radius.Window)
 
     -- Sidebar
-    local Sidebar = MakeFrame(Content, UDim2.new(0,124,1,0), nil, Theme.Sidebar)
+    local sideExpanded = 124
+    local sideCollapsed = 36
+    local sideOpen = true
+
+    local Sidebar = MakeFrame(Content, UDim2.new(0,sideExpanded,1,0), nil, Theme.Sidebar)
     Sidebar.BackgroundTransparency = 1
     Sidebar.ClipsDescendants = true
     MakeCorner(Sidebar, Radius.Window)
@@ -304,13 +307,37 @@ function HollowLib:CreateWindow(config)
     PlayerName.ClipsDescendants = true
 
     -- Tab content area
-    local TabContent = MakeFrame(Content, UDim2.new(1,-124,1,0), UDim2.new(0,124,0,0), Theme.Background)
+    local TabContent = MakeFrame(Content, UDim2.new(1,-sideExpanded,1,0), UDim2.new(0,sideExpanded,0,0), Theme.Background)
     TabContent.BackgroundTransparency = 1
     TabContent.ClipsDescendants = true
 
+    -- Sidebar auto-collapse on mouse leave (desktop only)
+    if not isMobile then
+        local function CollapseSidebar()
+            if not sideOpen then return end
+            sideOpen = false
+            Tween(Sidebar, {Size=UDim2.new(0,sideCollapsed,1,0)}, 0.25, Enum.EasingStyle.Quint)
+            Tween(TabContent, {Size=UDim2.new(1,-sideCollapsed,1,0), Position=UDim2.new(0,sideCollapsed,0,0)}, 0.25, Enum.EasingStyle.Quint)
+            Tween(SideTitle, {TextTransparency=1}, 0.15)
+            Tween(PlayerName, {TextTransparency=1}, 0.15)
+        end
+
+        local function ExpandSidebar()
+            if sideOpen then return end
+            sideOpen = true
+            Tween(Sidebar, {Size=UDim2.new(0,sideExpanded,1,0)}, 0.25, Enum.EasingStyle.Quint)
+            Tween(TabContent, {Size=UDim2.new(1,-sideExpanded,1,0), Position=UDim2.new(0,sideExpanded,0,0)}, 0.25, Enum.EasingStyle.Quint)
+            Tween(SideTitle, {TextTransparency=0}, 0.2)
+            Tween(PlayerName, {TextTransparency=0}, 0.2)
+        end
+
+        Sidebar.MouseEnter:Connect(ExpandSidebar)
+        Sidebar.MouseLeave:Connect(CollapseSidebar)
+    end
+
     -- ===== WATERMARK =====
     local wmName = config.WatermarkName or "hollowoodz"
-    local Watermark = MakeFrame(ScreenGui, UDim2.new(0, isMobile and 170 or 240, 0, 28), UDim2.new(0,12,1,-40), Theme.Watermark)
+    local Watermark = MakeFrame(ScreenGui, UDim2.new(0, isMobile and 220 or 240, 0, 28), UDim2.new(0,12,1,-40), Theme.Watermark)
     Watermark.BackgroundTransparency = 0.3
     MakeCorner(Watermark, 10) 
     local WMStroke = MakeStroke(Watermark, Theme.Border, 1)
