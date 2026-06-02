@@ -285,35 +285,16 @@ function HollowLib:CreateWindow(config)
     MakeStroke(PlayerInfo, Theme.Border, 1)
     MakePadding(PlayerInfo, 6, 6, 10, 10)
 
-    -- Avatar
+    -- Avatar (rbxthumb works without HTTP requests)
     local PlayerAvatar = Instance.new("ImageLabel")
     PlayerAvatar.Size = UDim2.new(0,26,0,26)
     PlayerAvatar.Position = UDim2.new(0,0,0.5,-13)
     PlayerAvatar.BackgroundColor3 = Theme.GroupBG
     PlayerAvatar.BorderSizePixel = 0
     PlayerAvatar.ScaleType = Enum.ScaleType.Crop
+    PlayerAvatar.Image = "rbxthumb://type=AvatarHeadShot&id="..LocalPlayer.UserId.."&w=150&h=150"
     PlayerAvatar.Parent = PlayerInfo
     MakeCorner(PlayerAvatar, 13)
-
-    -- Try multiple methods to load avatar
-    task.spawn(function()
-        local userId = LocalPlayer.UserId
-        local thumbOk, thumbContent = pcall(function()
-            return game:GetService("Players"):GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
-        end)
-        if thumbOk and thumbContent then
-            PlayerAvatar.Image = thumbContent
-        else
-            pcall(function()
-                PlayerAvatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..userId.."&width=48&height=48&format=png"
-            end)
-        end
-        if PlayerAvatar.Image == "" then
-            pcall(function()
-                PlayerAvatar.Image = "rbxthumb://type=AvatarHeadShot&id="..userId.."&w=48&h=48"
-            end)
-        end
-    end)
 
     -- Name (fixed width, clipped)
     local PlayerName = MakeLabel(PlayerInfo, config.DisplayName or LocalPlayer.DisplayName, 11, Theme.Text, Enum.Font.GothamMedium)
