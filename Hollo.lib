@@ -261,14 +261,21 @@ function HollowLib:CreateWindow(config)
     local SideTitle = MakeLabel(Sidebar, "NAVIGATION", 9, Theme.TextDisabled, Enum.Font.GothamBold)
     SideTitle.Size = UDim2.new(1,-20,0,18) SideTitle.Position = UDim2.new(0,12,0,10)
 
-    local TabList = MakeFrame(Sidebar, UDim2.new(1,0,1,-32), UDim2.new(0,0,0,32), Theme.Sidebar)
+    local TabList = MakeFrame(Sidebar, UDim2.new(1,0,1,-46), UDim2.new(0,0,0,32), Theme.Sidebar)
     TabList.BackgroundTransparency = 1
     TabList.ClipsDescendants = true
     MakeList(TabList, 5) MakePadding(TabList, 4, 6, 10, 10)
 
-    -- Player name/user stored for API
-    local PlayerName = {Text = config.DisplayName or LocalPlayer.DisplayName}
-    local PlayerUser = {Text = "@"..(config.Username or LocalPlayer.Name)}
+    -- Display name at bottom of sidebar
+    local PlayerInfo = MakeFrame(Sidebar, UDim2.new(1,0,0,40), UDim2.new(0,0,1,-40), Theme.Sidebar)
+    PlayerInfo.BackgroundTransparency = 1
+    MakeStroke(PlayerInfo, Theme.Border, 1)
+    MakePadding(PlayerInfo, 6, 6, 10, 10)
+    local PlayerAvatar = MakeImage(PlayerInfo, "https://www.roblox.com/headshot-thumbnail/image?userId="..LocalPlayer.UserId.."&width=48&height=48&format=png", UDim2.new(0,24,0,24), UDim2.new(0,0,0.5,-12))
+    MakeCorner(PlayerAvatar, 12)
+    local PlayerName = MakeLabel(PlayerInfo, config.DisplayName or LocalPlayer.DisplayName, 11, Theme.Text, Enum.Font.GothamMedium)
+    PlayerName.Size = UDim2.new(1,-32,1,0) PlayerName.Position = UDim2.new(0,30,0,0)
+    PlayerName.TextYAlignment = Enum.TextYAlignment.Center
 
     -- Tab content area
     local TabContent = MakeFrame(Content, UDim2.new(1,-124,1,0), UDim2.new(0,124,0,0), Theme.Background)
@@ -546,16 +553,16 @@ function HollowLib:CreateWindow(config)
                 local callback = cfg.Callback or function() end
                 local dragging = false
 
-                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,30), nil, Theme.ItemBG)
+                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,34), nil, Theme.ItemBG)
                 Container.BackgroundTransparency = 1
-                MakePadding(Container, 1, 1, 4, 4)
+                MakePadding(Container, 2, 2, 4, 4)
 
                 -- Label
                 local SliderLabel = MakeLabel(Container, cfg.Text or id, 11, Theme.TextDim, Enum.Font.Gotham)
-                SliderLabel.Size = UDim2.new(1,0,0,13)
+                SliderLabel.Size = UDim2.new(1,0,0,12)
 
-                -- Track (positioned right below label with gap)
-                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,15), UDim2.new(0,0,0,13), Theme.SliderBG)
+                -- Track (4px gap below label)
+                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,15), UDim2.new(0,0,0,16), Theme.SliderBG)
                 MakeCorner(SliderBG, 4) MakeStroke(SliderBG, Theme.Border, 1)
 
                 local alpha = (value-min)/(max-min)
@@ -1175,7 +1182,7 @@ function HollowLib:CreateWindow(config)
     function Window:SetWatermark(text) WMName.Text = text end
     function Window:SetWatermarkVisibility(visible) Watermark.Visible = visible end
     function Window:SetDisplayName(name) PlayerName.Text = name end
-    function Window:SetUsername(name) PlayerUser.Text = "@"..name end
+    function Window:SetUsername(name) end -- no username display, kept for compatibility
     function Window:SetLogo(textureId) LogoImg.Image = "rbxassetid://"..tostring(textureId) end
     function Window:Unload()
         ScreenGui:Destroy()
