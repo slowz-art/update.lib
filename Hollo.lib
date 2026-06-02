@@ -218,10 +218,10 @@ function HollowLib:CreateWindow(config)
         task.wait(0.35) ScreenGui:Destroy()
     end)
 
-    -- Mobile only: floating draggable buttons at top
+    -- Mobile only: floating draggable buttons on the left
     if isMobile then
         -- Toggle UI button
-        local TogFloat = MakeButton(ScreenGui, UDim2.new(0,70,0,26), UDim2.new(1,-146,0,12), Theme.Watermark)
+        local TogFloat = MakeButton(ScreenGui, UDim2.new(0,70,0,26), UDim2.new(0,12,0.45,0), Theme.Watermark)
         TogFloat.BackgroundTransparency = 0.3
         MakeCorner(TogFloat, 8) MakeStroke(TogFloat, Theme.Border, 1)
         local TogFloatL = MakeLabel(TogFloat, "Toggle UI", 9, Theme.TextDim, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
@@ -231,12 +231,10 @@ function HollowLib:CreateWindow(config)
         TogFloat.MouseButton1Click:Connect(function()
             uiVisible = not uiVisible
             Main.Visible = uiVisible
-            Tween(TogFloat, {BackgroundColor3 = uiVisible and Theme.Watermark or Theme.AccentDark}, 0.15)
-            Tween(TogFloatL, {TextColor3 = uiVisible and Theme.TextDim or Theme.Text}, 0.15)
         end)
 
         -- Lock UI button
-        local LockFloat = MakeButton(ScreenGui, UDim2.new(0,62,0,26), UDim2.new(1,-72,0,12), Theme.Watermark)
+        local LockFloat = MakeButton(ScreenGui, UDim2.new(0,62,0,26), UDim2.new(0,12,0.45,30), Theme.Watermark)
         LockFloat.BackgroundTransparency = 0.3
         MakeCorner(LockFloat, 8) MakeStroke(LockFloat, Theme.Border, 1)
         local LockFloatL = MakeLabel(LockFloat, "Lock UI", 9, Theme.TextDim, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
@@ -245,8 +243,6 @@ function HollowLib:CreateWindow(config)
 
         LockFloat.MouseButton1Click:Connect(function()
             uiLocked = not uiLocked
-            Tween(LockFloat, {BackgroundColor3 = uiLocked and Theme.AccentDark or Theme.Watermark}, 0.15)
-            Tween(LockFloatL, {TextColor3 = uiLocked and Theme.Text or Theme.TextDim}, 0.15)
             LockFloatL.Text = uiLocked and "Locked" or "Lock UI"
         end)
     end
@@ -311,29 +307,27 @@ function HollowLib:CreateWindow(config)
     TabContent.BackgroundTransparency = 1
     TabContent.ClipsDescendants = true
 
-    -- Sidebar auto-collapse on mouse leave (desktop only)
-    if not isMobile then
-        local function CollapseSidebar()
-            if not sideOpen then return end
-            sideOpen = false
-            Tween(Sidebar, {Size=UDim2.new(0,sideCollapsed,1,0)}, 0.25, Enum.EasingStyle.Quint)
-            Tween(TabContent, {Size=UDim2.new(1,-sideCollapsed,1,0), Position=UDim2.new(0,sideCollapsed,0,0)}, 0.25, Enum.EasingStyle.Quint)
-            Tween(SideTitle, {TextTransparency=1}, 0.15)
-            Tween(PlayerName, {TextTransparency=1}, 0.15)
-        end
-
-        local function ExpandSidebar()
-            if sideOpen then return end
-            sideOpen = true
-            Tween(Sidebar, {Size=UDim2.new(0,sideExpanded,1,0)}, 0.25, Enum.EasingStyle.Quint)
-            Tween(TabContent, {Size=UDim2.new(1,-sideExpanded,1,0), Position=UDim2.new(0,sideExpanded,0,0)}, 0.25, Enum.EasingStyle.Quint)
-            Tween(SideTitle, {TextTransparency=0}, 0.2)
-            Tween(PlayerName, {TextTransparency=0}, 0.2)
-        end
-
-        Sidebar.MouseEnter:Connect(ExpandSidebar)
-        Sidebar.MouseLeave:Connect(CollapseSidebar)
+    -- Sidebar auto-collapse on mouse leave / touch outside
+    local function CollapseSidebar()
+        if not sideOpen then return end
+        sideOpen = false
+        Tween(Sidebar, {Size=UDim2.new(0,sideCollapsed,1,0)}, 0.25, Enum.EasingStyle.Quint)
+        Tween(TabContent, {Size=UDim2.new(1,-sideCollapsed,1,0), Position=UDim2.new(0,sideCollapsed,0,0)}, 0.25, Enum.EasingStyle.Quint)
+        Tween(SideTitle, {TextTransparency=1}, 0.15)
+        Tween(PlayerName, {TextTransparency=1}, 0.15)
     end
+
+    local function ExpandSidebar()
+        if sideOpen then return end
+        sideOpen = true
+        Tween(Sidebar, {Size=UDim2.new(0,sideExpanded,1,0)}, 0.25, Enum.EasingStyle.Quint)
+        Tween(TabContent, {Size=UDim2.new(1,-sideExpanded,1,0), Position=UDim2.new(0,sideExpanded,0,0)}, 0.25, Enum.EasingStyle.Quint)
+        Tween(SideTitle, {TextTransparency=0}, 0.2)
+        Tween(PlayerName, {TextTransparency=0}, 0.2)
+    end
+
+    Sidebar.MouseEnter:Connect(ExpandSidebar)
+    Sidebar.MouseLeave:Connect(CollapseSidebar)
 
     -- ===== WATERMARK =====
     local wmName = config.WatermarkName or "hollowoodz"
