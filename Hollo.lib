@@ -275,10 +275,13 @@ function HollowLib:CreateWindow(config)
     Watermark.BackgroundTransparency = 0.3
     MakeCorner(Watermark, 10) 
     local WMStroke = MakeStroke(Watermark, Theme.Border, 1)
+    MakeDraggable(Watermark, Watermark)
 
     -- Left accent bar
     local WMBar = MakeFrame(Watermark, UDim2.new(0,3,0,16), UDim2.new(0,6,0.5,-8), Theme.Accent)
     MakeCorner(WMBar, 2)
+
+    MakeDraggable(Watermark, Watermark)
 
     -- Name label
     local WMName = MakeLabel(Watermark, "hollowoodz", 10, Theme.Text, Enum.Font.GothamBold)
@@ -466,7 +469,7 @@ function HollowLib:CreateWindow(config)
             ItemContainer.AutomaticSize = Enum.AutomaticSize.Y
             ItemContainer.BackgroundTransparency = 1
             MakeCorner(ItemContainer, Radius.Group) MakePadding(ItemContainer, 6, 8, 6, 6)
-            MakeList(ItemContainer, 2)
+            MakeList(ItemContainer, 3)
 
             -- ADD TOGGLE (Clean checkbox style)
             function Group:AddToggle(id, cfg)
@@ -474,26 +477,26 @@ function HollowLib:CreateWindow(config)
                 local state = cfg.Default or false
                 local callback = cfg.Callback or function() end
 
-                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,22), nil, Theme.ItemBG)
+                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,20), nil, Theme.ItemBG)
                 Row.BackgroundTransparency = 1
-                MakePadding(Row, 0, 0, 6, 6)
+                MakePadding(Row, 0, 0, 4, 4)
 
                 local RowBtn = MakeButton(Row, UDim2.new(1,0,1,0), nil, Theme.ItemBG)
                 RowBtn.BackgroundTransparency = 1
 
                 -- Checkbox box
-                local CheckBox = MakeFrame(Row, UDim2.new(0,14,0,14), UDim2.new(0,0,0.5,-7), Theme.Toggle)
+                local CheckBox = MakeFrame(Row, UDim2.new(0,13,0,13), UDim2.new(0,0,0.5,-6), Theme.Toggle)
                 MakeCorner(CheckBox, 3)
                 local CheckStroke = MakeStroke(CheckBox, Theme.Border, 1)
 
-                -- Checkmark text
-                local CheckMark = MakeLabel(CheckBox, "", 10, Theme.Text, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
-                CheckMark.Size = UDim2.new(1,0,1,0)
-                CheckMark.TextYAlignment = Enum.TextYAlignment.Center
+                -- Inner fill (visible when on)
+                local CheckFill = MakeFrame(CheckBox, UDim2.new(0,7,0,7), UDim2.new(0.5,-3,0.5,-3), Theme.Accent)
+                MakeCorner(CheckFill, 2)
+                CheckFill.BackgroundTransparency = 1
 
-                local ToggleLabel = MakeLabel(Row, cfg.Text or id, 12, Theme.TextDim, Enum.Font.Gotham)
-                ToggleLabel.Size = UDim2.new(1,-22,1,0)
-                ToggleLabel.Position = UDim2.new(0,20,0,0)
+                local ToggleLabel = MakeLabel(Row, cfg.Text or id, 11, Theme.TextDim, Enum.Font.Gotham)
+                ToggleLabel.Size = UDim2.new(1,-20,1,0)
+                ToggleLabel.Position = UDim2.new(0,18,0,0)
                 ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
 
                 local function SetState(newState, skipCb)
@@ -501,12 +504,12 @@ function HollowLib:CreateWindow(config)
                     if state then
                         Tween(CheckBox, {BackgroundColor3=Theme.Accent}, 0.15)
                         Tween(CheckStroke, {Color=Theme.Accent}, 0.15)
-                        CheckMark.Text = "v"
+                        Tween(CheckFill, {BackgroundTransparency=0}, 0.15)
                         Tween(ToggleLabel, {TextColor3=Theme.Text}, 0.15)
                     else
                         Tween(CheckBox, {BackgroundColor3=Theme.Toggle}, 0.15)
                         Tween(CheckStroke, {Color=Theme.Border}, 0.15)
-                        CheckMark.Text = ""
+                        Tween(CheckFill, {BackgroundTransparency=1}, 0.15)
                         Tween(ToggleLabel, {TextColor3=Theme.TextDim}, 0.15)
                     end
                     if not skipCb then callback(state) end
@@ -538,26 +541,26 @@ function HollowLib:CreateWindow(config)
                 local callback = cfg.Callback or function() end
                 local dragging = false
 
-                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,36), nil, Theme.ItemBG)
+                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,32), nil, Theme.ItemBG)
                 Container.BackgroundTransparency = 1
-                MakePadding(Container, 2, 2, 6, 6)
+                MakePadding(Container, 2, 2, 4, 4)
 
                 -- Label
-                local SliderLabel = MakeLabel(Container, cfg.Text or id, 12, Theme.TextDim, Enum.Font.Gotham)
-                SliderLabel.Size = UDim2.new(1,0,0,14)
+                local SliderLabel = MakeLabel(Container, cfg.Text or id, 11, Theme.TextDim, Enum.Font.Gotham)
+                SliderLabel.Size = UDim2.new(1,0,0,13)
 
-                -- Thick track (matches reference style)
-                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,16), UDim2.new(0,0,1,-4), Theme.SliderBG)
-                MakeCorner(SliderBG, 4) MakeStroke(SliderBG, Theme.Border, 1)
+                -- Track
+                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,13), UDim2.new(0,0,1,-3), Theme.SliderBG)
+                MakeCorner(SliderBG, 3) MakeStroke(SliderBG, Theme.Border, 1)
 
                 local alpha = (value-min)/(max-min)
 
-                -- Thick fill bar
+                -- Fill bar
                 local SliderFill = MakeFrame(SliderBG, UDim2.new(alpha,0,1,0), nil, Theme.SliderFill)
-                MakeCorner(SliderFill, 4)
+                MakeCorner(SliderFill, 3)
 
-                -- Value text overlaid on bar (value/max format)
-                local ValueLabel = MakeLabel(SliderBG, tostring(value) .. suffix .. "/" .. tostring(max) .. suffix, 10, Theme.Text, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
+                -- Value text overlaid on bar
+                local ValueLabel = MakeLabel(SliderBG, tostring(value) .. suffix .. "/" .. tostring(max) .. suffix, 9, Theme.Text, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
                 ValueLabel.Size = UDim2.new(1,0,1,0)
                 ValueLabel.TextYAlignment = Enum.TextYAlignment.Center
                 ValueLabel.ZIndex = 3
@@ -604,11 +607,11 @@ function HollowLib:CreateWindow(config)
                 local text = cfg.Text or "Button"
                 local callback = cfg.Func or cfg.Callback or function() end
 
-                local Btn = MakeButton(ItemContainer, UDim2.new(1,0,0,24), nil, Theme.ItemBG)
+                local Btn = MakeButton(ItemContainer, UDim2.new(1,0,0,22), nil, Theme.ItemBG)
                 Btn.BackgroundTransparency = 1
-                MakePadding(Btn, 0, 0, 6, 6)
+                MakePadding(Btn, 0, 0, 4, 4)
 
-                local BtnLabel = MakeLabel(Btn, text, 12, Theme.TextDim, Enum.Font.Gotham, Enum.TextXAlignment.Center)
+                local BtnLabel = MakeLabel(Btn, text, 11, Theme.TextDim, Enum.Font.Gotham, Enum.TextXAlignment.Center)
                 BtnLabel.Size = UDim2.new(1,0,1,0) BtnLabel.TextYAlignment = Enum.TextYAlignment.Center
 
                 -- Underline
@@ -648,28 +651,28 @@ function HollowLib:CreateWindow(config)
                 local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,0), nil, Theme.ItemBG)
                 Container.BackgroundTransparency = 1
                 Container.AutomaticSize = Enum.AutomaticSize.Y
-                MakeCorner(Container, Radius.Item) MakePadding(Container, 5, 5, 8, 8)
+                MakeCorner(Container, Radius.Item) MakePadding(Container, 3, 3, 4, 4)
 
-                local Header = MakeButton(Container, UDim2.new(1,0,0,30), nil, Theme.DropBG)
+                local Header = MakeButton(Container, UDim2.new(1,0,0,26), nil, Theme.DropBG)
                 Header.BackgroundTransparency = 1
                 MakeCorner(Header, Radius.Small) MakeStroke(Header, Theme.Border, 1)
 
-                local DropLabel = MakeLabel(Header, cfg.Text or id, 10, Theme.TextDim, Enum.Font.Gotham)
-                DropLabel.Size = UDim2.new(1,-30,0,12) DropLabel.Position = UDim2.new(0,10,0,3)
+                local DropLabel = MakeLabel(Header, cfg.Text or id, 9, Theme.TextDim, Enum.Font.Gotham)
+                DropLabel.Size = UDim2.new(1,-28,0,11) DropLabel.Position = UDim2.new(0,8,0,2)
 
-                local SelectedLabel = MakeLabel(Header, tostring(selected), 11, Theme.Text, Enum.Font.GothamMedium)
-                SelectedLabel.Size = UDim2.new(1,-30,0,13) SelectedLabel.Position = UDim2.new(0,10,0,15)
+                local SelectedLabel = MakeLabel(Header, tostring(selected), 10, Theme.Text, Enum.Font.GothamMedium)
+                SelectedLabel.Size = UDim2.new(1,-28,0,12) SelectedLabel.Position = UDim2.new(0,8,0,13)
 
                 local DropArrow = Instance.new("ImageLabel")
-                DropArrow.Size = UDim2.new(0,14,0,14)
-                DropArrow.Position = UDim2.new(1,-20,0.5,-7)
+                DropArrow.Size = UDim2.new(0,12,0,12)
+                DropArrow.Position = UDim2.new(1,-18,0.5,-6)
                 DropArrow.BackgroundTransparency = 1
                 DropArrow.Image = "rbxassetid://6031091004"
                 DropArrow.ImageColor3 = Theme.TextDim
                 DropArrow.ScaleType = Enum.ScaleType.Fit
                 DropArrow.Parent = Header
 
-                local OptionList = MakeFrame(Container, UDim2.new(1,0,0,0), UDim2.new(0,0,0,36), Theme.DropOpen)
+                local OptionList = MakeFrame(Container, UDim2.new(1,0,0,0), UDim2.new(0,0,0,32), Theme.DropOpen)
                 OptionList.BackgroundTransparency = 1
                 OptionList.AutomaticSize = Enum.AutomaticSize.Y OptionList.ClipsDescendants = true
                 OptionList.Visible = false OptionList.ZIndex = 10
@@ -680,14 +683,14 @@ function HollowLib:CreateWindow(config)
                     for _, c in pairs(OptionList:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
                     for _, val in ipairs(values) do
                         local isSel = (multi and multiSelected[val]) or (not multi and selected == val)
-                        local Opt = MakeButton(OptionList, UDim2.new(1,0,0,28), nil, isSel and Theme.AccentDark or Theme.DropBG)
+                        local Opt = MakeButton(OptionList, UDim2.new(1,0,0,22), nil, isSel and Theme.AccentDark or Theme.DropBG)
                         MakeCorner(Opt, Radius.Small)
-                        local OptLabel = MakeLabel(Opt, tostring(val), 11, isSel and Theme.Text or Theme.TextDim, Enum.Font.GothamMedium)
-                        OptLabel.Size = UDim2.new(1,-10,1,0) OptLabel.Position = UDim2.new(0,10,0,0)
+                        local OptLabel = MakeLabel(Opt, tostring(val), 10, isSel and Theme.Text or Theme.TextDim, Enum.Font.GothamMedium)
+                        OptLabel.Size = UDim2.new(1,-8,1,0) OptLabel.Position = UDim2.new(0,8,0,0)
                         OptLabel.TextYAlignment = Enum.TextYAlignment.Center
 
                         if multi and isSel then
-                            local Check = MakeLabel(Opt, "v", 10, Theme.Accent, Enum.Font.GothamBold, Enum.TextXAlignment.Right)
+                            local Check = MakeLabel(Opt, "*", 12, Theme.Accent, Enum.Font.GothamBold, Enum.TextXAlignment.Right)
                             Check.Size = UDim2.new(0,18,1,0) Check.Position = UDim2.new(1,-20,0,0)
                             Check.TextYAlignment = Enum.TextYAlignment.Center
                         end
@@ -734,10 +737,10 @@ function HollowLib:CreateWindow(config)
 
             -- ADD LABEL
             function Group:AddLabel(text, richText)
-                local Label = MakeFrame(ItemContainer, UDim2.new(1,0,0,18), nil, Theme.ItemBG)
+                local Label = MakeFrame(ItemContainer, UDim2.new(1,0,0,16), nil, Theme.ItemBG)
                 Label.BackgroundTransparency = 1
-                MakePadding(Label, 0, 0, 6, 6)
-                local LabelText = MakeLabel(Label, text, 11, Theme.TextDim, Enum.Font.Gotham)
+                MakePadding(Label, 0, 0, 4, 4)
+                local LabelText = MakeLabel(Label, text, 10, Theme.TextDim, Enum.Font.Gotham)
                 LabelText.Size = UDim2.new(1,0,1,0) LabelText.TextYAlignment = Enum.TextYAlignment.Center
                 LabelText.RichText = richText or false LabelText.TextWrapped = true
                 return LabelText
@@ -745,129 +748,151 @@ function HollowLib:CreateWindow(config)
 
             -- ADD DIVIDER
             function Group:AddDivider()
-                local Div = MakeFrame(ItemContainer, UDim2.new(1,0,0,10), nil, Theme.GroupBG)
+                local Div = MakeFrame(ItemContainer, UDim2.new(1,0,0,6), nil, Theme.GroupBG)
                 Div.BackgroundTransparency = 1
                 local Line = MakeFrame(Div, UDim2.new(1,-14,0,1), UDim2.new(0,7,0.5,0), Theme.Border)
                 MakeCorner(Line, 1)
                 return Div
             end
 
-            -- ADD COLOR PICKER (Modern 2D: SV square + Hue bar)
+            -- ADD COLOR PICKER (Modern 2D: SV square + Hue bar, draggable)
             function Group:AddColorPicker(id, cfg)
                 local ColorPicker = {}
                 local color = cfg.Default or Color3.fromRGB(255,255,255)
                 local callback = cfg.Callback or function() end
                 local pickerOpen = false
 
-                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,32), nil, Theme.ItemBG)
+                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,20), nil, Theme.ItemBG)
                 Container.BackgroundTransparency = 1
-                MakeCorner(Container, Radius.Item) MakePadding(Container, 0, 0, 10, 10)
+                MakePadding(Container, 0, 0, 4, 4)
 
-                local PickerLabel = MakeLabel(Container, cfg.Title or id, 12, Theme.Text, Enum.Font.GothamMedium)
-                PickerLabel.Size = UDim2.new(1,-46,1,0) PickerLabel.TextYAlignment = Enum.TextYAlignment.Center
+                local PickerLabel = MakeLabel(Container, cfg.Title or id, 11, Theme.TextDim, Enum.Font.Gotham)
+                PickerLabel.Size = UDim2.new(1,-36,1,0) PickerLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-                local ColorBtn = MakeButton(Container, UDim2.new(0,36,0,18), UDim2.new(1,-38,0.5,-9), color)
-                MakeCorner(ColorBtn, Radius.Small) MakeStroke(ColorBtn, Theme.BorderBright, 1)
+                local ColorBtn = MakeButton(Container, UDim2.new(0,28,0,14), UDim2.new(1,-30,0.5,-7), color)
+                MakeCorner(ColorBtn, 4) MakeStroke(ColorBtn, Theme.BorderBright, 1)
 
                 -- Popup
-                local popupW, popupH = 220, 260
-                local PickerPopup = MakeFrame(ScreenGui, UDim2.new(0,popupW,0,popupH), UDim2.new(0,0,0,0), Theme.GroupBG)
+                local popupW, popupH = 230, 270
+                local PickerPopup = MakeFrame(ScreenGui, UDim2.new(0,popupW,0,popupH), UDim2.new(0,0,0,0), Theme.Background)
                 PickerPopup.Visible = false PickerPopup.ZIndex = 100
-                PickerPopup.BackgroundTransparency = 0.1
+                PickerPopup.BackgroundTransparency = 0.05
                 MakeCorner(PickerPopup, Radius.Group) MakeStroke(PickerPopup, Theme.BorderBright, 1)
 
-                local PickerTitle = MakeLabel(PickerPopup, cfg.Title or "Color Picker", 11, Theme.Text, Enum.Font.GothamBold)
-                PickerTitle.Size = UDim2.new(1,0,0,20) PickerTitle.Position = UDim2.new(0,10,0,6)
+                -- Draggable title bar
+                local PickerBar = MakeFrame(PickerPopup, UDim2.new(1,0,0,24), nil, Theme.GroupHeader)
+                PickerBar.ZIndex = 101 PickerBar.BackgroundTransparency = 0.5
+                MakeCorner(PickerBar, Radius.Group)
+                local PickerBarFill = MakeFrame(PickerBar, UDim2.new(1,0,0.5,0), UDim2.new(0,0,0.5,0), Theme.GroupHeader)
+                PickerBarFill.ZIndex = 101 PickerBarFill.BackgroundTransparency = 0.5
 
-                -- SV Square (saturation X, value Y)
-                local svSize = 170
-                local SVFrame = MakeFrame(PickerPopup, UDim2.new(0,svSize,0,svSize), UDim2.new(0,10,0,28), Color3.fromHSV(0,1,1))
+                local PickerTitle = MakeLabel(PickerBar, cfg.Title or "Color Picker", 11, Theme.Text, Enum.Font.GothamBold)
+                PickerTitle.Size = UDim2.new(1,-12,1,0) PickerTitle.Position = UDim2.new(0,8,0,0)
+                PickerTitle.ZIndex = 102 PickerTitle.TextYAlignment = Enum.TextYAlignment.Center
+
+                MakeDraggable(PickerBar, PickerPopup)
+
+                -- SV Square
+                local svSize = 160
+                local SVFrame = MakeFrame(PickerPopup, UDim2.new(0,svSize,0,svSize), UDim2.new(0,10,0,32), Color3.fromHSV(0,1,1))
                 SVFrame.ZIndex = 101
                 MakeCorner(SVFrame, 6) SVFrame.ClipsDescendants = true
 
                 -- White gradient left to right (saturation)
-                local WhiteGrad = MakeFrame(SVFrame, UDim2.new(1,0,1,0), nil, Color3.new(1,1,1))
-                WhiteGrad.ZIndex = 102
-                local wGrad = Instance.new("UIGradient")
-                wGrad.Color = ColorSequence.new(Color3.new(1,1,1), Color3.new(1,1,1))
-                wGrad.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0), NumberSequenceKeypoint.new(1,1)})
-                wGrad.Parent = WhiteGrad
+                local WhiteOverlay = Instance.new("Frame")
+                WhiteOverlay.Size = UDim2.new(1,0,1,0)
+                WhiteOverlay.BackgroundColor3 = Color3.new(1,1,1)
+                WhiteOverlay.BorderSizePixel = 0
+                WhiteOverlay.ZIndex = 102
+                WhiteOverlay.Parent = SVFrame
+                local wg = Instance.new("UIGradient")
+                wg.Transparency = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 0),
+                    NumberSequenceKeypoint.new(1, 1)
+                })
+                wg.Parent = WhiteOverlay
 
                 -- Black gradient top to bottom (value)
-                local BlackGrad = MakeFrame(SVFrame, UDim2.new(1,0,1,0), nil, Color3.new(0,0,0))
-                BlackGrad.ZIndex = 103
-                local bGrad = Instance.new("UIGradient")
-                bGrad.Color = ColorSequence.new(Color3.new(0,0,0), Color3.new(0,0,0))
-                bGrad.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,1), NumberSequenceKeypoint.new(1,0)})
-                bGrad.Rotation = 90
-                bGrad.Parent = BlackGrad
+                local BlackOverlay = Instance.new("Frame")
+                BlackOverlay.Size = UDim2.new(1,0,1,0)
+                BlackOverlay.BackgroundColor3 = Color3.new(0,0,0)
+                BlackOverlay.BorderSizePixel = 0
+                BlackOverlay.ZIndex = 103
+                BlackOverlay.Parent = SVFrame
+                local bg = Instance.new("UIGradient")
+                bg.Transparency = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 1),
+                    NumberSequenceKeypoint.new(1, 0)
+                })
+                bg.Rotation = 90
+                bg.Parent = BlackOverlay
 
                 -- SV Cursor (circle)
-                local SVCursor = MakeFrame(SVFrame, UDim2.new(0,12,0,12), UDim2.new(0,0,0,0), Color3.new(1,1,1))
+                local SVCursor = MakeFrame(SVFrame, UDim2.new(0,10,0,10), UDim2.new(0,0,0,0), Color3.new(1,1,1))
                 SVCursor.ZIndex = 105
-                MakeCorner(SVCursor, 6) MakeStroke(SVCursor, Color3.new(0,0,0), 2)
+                MakeCorner(SVCursor, 5) MakeStroke(SVCursor, Color3.new(0,0,0), 2)
 
-                -- SV drag button
                 local SVBtn = MakeButton(SVFrame, UDim2.new(1,0,1,0), nil, Theme.Background)
                 SVBtn.BackgroundTransparency = 1 SVBtn.ZIndex = 104
 
                 -- Hue bar (vertical, right side)
-                local HueBar = MakeFrame(PickerPopup, UDim2.new(0,20,0,svSize), UDim2.new(0,svSize+16,0,28), Color3.new(1,0,0))
+                local HueBar = MakeFrame(PickerPopup, UDim2.new(0,20,0,svSize), UDim2.new(0,svSize+16,0,32), Color3.new(1,1,1))
                 HueBar.ZIndex = 101
                 MakeCorner(HueBar, 4) HueBar.ClipsDescendants = true
+
                 local HueGrad = Instance.new("UIGradient")
                 HueGrad.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0,Color3.fromHSV(0,1,1)),
-                    ColorSequenceKeypoint.new(0.167,Color3.fromHSV(0.167,1,1)),
-                    ColorSequenceKeypoint.new(0.333,Color3.fromHSV(0.333,1,1)),
-                    ColorSequenceKeypoint.new(0.5,Color3.fromHSV(0.5,1,1)),
-                    ColorSequenceKeypoint.new(0.667,Color3.fromHSV(0.667,1,1)),
-                    ColorSequenceKeypoint.new(0.833,Color3.fromHSV(0.833,1,1)),
-                    ColorSequenceKeypoint.new(1,Color3.fromHSV(1,1,1))
+                    ColorSequenceKeypoint.new(0, Color3.fromHSV(0,1,1)),
+                    ColorSequenceKeypoint.new(0.167, Color3.fromHSV(0.167,1,1)),
+                    ColorSequenceKeypoint.new(0.333, Color3.fromHSV(0.333,1,1)),
+                    ColorSequenceKeypoint.new(0.5, Color3.fromHSV(0.5,1,1)),
+                    ColorSequenceKeypoint.new(0.667, Color3.fromHSV(0.667,1,1)),
+                    ColorSequenceKeypoint.new(0.833, Color3.fromHSV(0.833,1,1)),
+                    ColorSequenceKeypoint.new(1, Color3.fromHSV(0.999,1,1))
                 })
                 HueGrad.Rotation = 90
                 HueGrad.Parent = HueBar
 
                 -- Hue cursor
-                local HueCursor = MakeFrame(HueBar, UDim2.new(1,4,0,6), UDim2.new(0,-2,0,0), Color3.new(1,1,1))
+                local HueCursor = MakeFrame(HueBar, UDim2.new(1,4,0,4), UDim2.new(0,-2,0,0), Color3.new(1,1,1))
                 HueCursor.ZIndex = 106
-                MakeCorner(HueCursor, 3) MakeStroke(HueCursor, Color3.new(0,0,0), 1)
+                MakeCorner(HueCursor, 2) MakeStroke(HueCursor, Color3.new(0,0,0), 1)
 
                 local HueBtn = MakeButton(HueBar, UDim2.new(1,0,1,0), nil, Theme.Background)
                 HueBtn.BackgroundTransparency = 1 HueBtn.ZIndex = 105
 
-                -- Hex display row
-                local HexRow = MakeFrame(PickerPopup, UDim2.new(0,popupW-20,0,24), UDim2.new(0,10,0,svSize+36), Theme.DropBG)
+                -- Hex + RGB display
+                local HexRow = MakeFrame(PickerPopup, UDim2.new(0,popupW-20,0,22), UDim2.new(0,10,0,svSize+38), Theme.DropBG)
                 HexRow.ZIndex = 101
                 MakeCorner(HexRow, 5) MakeStroke(HexRow, Theme.Border, 1)
 
                 local HexLabel = MakeLabel(HexRow, "#ffffff", 10, Theme.Text, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
-                HexLabel.Size = UDim2.new(0.5,0,1,0) HexLabel.ZIndex = 102
+                HexLabel.Size = UDim2.new(0.45,0,1,0) HexLabel.ZIndex = 102
                 HexLabel.TextYAlignment = Enum.TextYAlignment.Center
 
                 local RGBLabel = MakeLabel(HexRow, "255, 255, 255", 10, Theme.TextDim, Enum.Font.Gotham, Enum.TextXAlignment.Center)
-                RGBLabel.Size = UDim2.new(0.5,0,1,0) RGBLabel.Position = UDim2.new(0.5,0,0,0)
+                RGBLabel.Size = UDim2.new(0.55,0,1,0) RGBLabel.Position = UDim2.new(0.45,0,0,0)
                 RGBLabel.ZIndex = 102 RGBLabel.TextYAlignment = Enum.TextYAlignment.Center
 
                 -- Preview swatch
-                local PreviewSwatch = MakeFrame(PickerPopup, UDim2.new(0,popupW-20,0,16), UDim2.new(0,10,0,svSize+64), color)
+                local PreviewSwatch = MakeFrame(PickerPopup, UDim2.new(0,popupW-20,0,14), UDim2.new(0,10,0,svSize+64), color)
                 PreviewSwatch.ZIndex = 101
                 MakeCorner(PreviewSwatch, 4) MakeStroke(PreviewSwatch, Theme.Border, 1)
 
                 local hue, sat, val = Color3.toHSV(color)
 
                 local function UpdateColor()
-                    color = Color3.fromHSV(hue,sat,val)
+                    color = Color3.fromHSV(hue, sat, val)
                     ColorBtn.BackgroundColor3 = color
-                    SVFrame.BackgroundColor3 = Color3.fromHSV(hue,1,1)
-                    SVCursor.Position = UDim2.new(sat,-6,(1-val),-6)
-                    HueCursor.Position = UDim2.new(0,-2,hue,-3)
+                    SVFrame.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
+                    SVCursor.Position = UDim2.new(sat, -5, (1 - val), -5)
+                    HueCursor.Position = UDim2.new(0, -2, hue, -2)
                     PreviewSwatch.BackgroundColor3 = color
-                    local r = math.floor(color.R*255)
-                    local g = math.floor(color.G*255)
-                    local b = math.floor(color.B*255)
+                    local r = math.floor(color.R * 255)
+                    local g = math.floor(color.G * 255)
+                    local b = math.floor(color.B * 255)
                     HexLabel.Text = string.format("#%02x%02x%02x", r, g, b)
-                    RGBLabel.Text = r..", "..g..", "..b
+                    RGBLabel.Text = r .. ", " .. g .. ", " .. b
                     callback(color)
                 end
 
@@ -875,27 +900,27 @@ function HollowLib:CreateWindow(config)
                 local svDrag = false
                 SVBtn.MouseButton1Down:Connect(function() svDrag = true end)
                 UserInputService.InputChanged:Connect(function(input)
-                    if svDrag and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
+                    if svDrag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                         sat = math.clamp((input.Position.X - SVFrame.AbsolutePosition.X) / SVFrame.AbsoluteSize.X, 0, 1)
                         val = 1 - math.clamp((input.Position.Y - SVFrame.AbsolutePosition.Y) / SVFrame.AbsoluteSize.Y, 0, 1)
                         UpdateColor()
                     end
                 end)
                 UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then svDrag=false end
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then svDrag = false end
                 end)
 
                 -- Hue drag
                 local hueDrag = false
                 HueBtn.MouseButton1Down:Connect(function() hueDrag = true end)
                 UserInputService.InputChanged:Connect(function(input)
-                    if hueDrag and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
-                        hue = math.clamp((input.Position.Y - HueBar.AbsolutePosition.Y) / HueBar.AbsoluteSize.Y, 0, 1)
+                    if hueDrag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                        hue = math.clamp((input.Position.Y - HueBar.AbsolutePosition.Y) / HueBar.AbsoluteSize.Y, 0, 0.999)
                         UpdateColor()
                     end
                 end)
                 UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then hueDrag=false end
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then hueDrag = false end
                 end)
 
                 ColorBtn.MouseButton1Click:Connect(function()
@@ -908,7 +933,7 @@ function HollowLib:CreateWindow(config)
 
                 UpdateColor()
 
-                function ColorPicker:SetValue(c) color=c hue,sat,val=Color3.toHSV(c) UpdateColor() end
+                function ColorPicker:SetValue(c) color = c hue, sat, val = Color3.toHSV(c) UpdateColor() end
                 function ColorPicker:GetValue() return color end
 
                 if cfg.Flag then HollowLib.Flags[cfg.Flag] = ColorPicker end
@@ -922,18 +947,18 @@ function HollowLib:CreateWindow(config)
                 local callback = cfg.Callback or function() end
                 local listening = false
 
-                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,32), nil, Theme.ItemBG)
+                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,22), nil, Theme.ItemBG)
                 Row.BackgroundTransparency = 1
-                MakeCorner(Row, Radius.Item) MakePadding(Row, 0, 0, 10, 10)
+                MakeCorner(Row, Radius.Item) MakePadding(Row, 0, 0, 4, 4)
 
-                local KBLabel = MakeLabel(Row, cfg.Text or id, 12, Theme.Text, Enum.Font.GothamMedium)
-                KBLabel.Size = UDim2.new(1,-76,1,0) KBLabel.TextYAlignment = Enum.TextYAlignment.Center
+                local KBLabel = MakeLabel(Row, cfg.Text or id, 11, Theme.TextDim, Enum.Font.Gotham)
+                KBLabel.Size = UDim2.new(1,-64,1,0) KBLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-                local KBBtn = MakeButton(Row, UDim2.new(0,68,0,22), UDim2.new(1,-70,0.5,-11), Theme.DropBG)
+                local KBBtn = MakeButton(Row, UDim2.new(0,58,0,16), UDim2.new(1,-60,0.5,-8), Theme.DropBG)
                 KBBtn.BackgroundTransparency = 1
                 MakeCorner(KBBtn, Radius.Small) MakeStroke(KBBtn, Theme.Border, 1)
 
-                local KBText = MakeLabel(KBBtn, tostring(key.Name), 10, Theme.Accent, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
+                local KBText = MakeLabel(KBBtn, tostring(key.Name), 9, Theme.Accent, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
                 KBText.Size = UDim2.new(1,0,1,0) KBText.TextYAlignment = Enum.TextYAlignment.Center
 
                 KBBtn.MouseButton1Click:Connect(function()
