@@ -291,10 +291,28 @@ function HollowLib:CreateWindow(config)
     PlayerAvatar.Position = UDim2.new(0,0,0.5,-13)
     PlayerAvatar.BackgroundColor3 = Theme.GroupBG
     PlayerAvatar.BorderSizePixel = 0
+    PlayerAvatar.ScaleType = Enum.ScaleType.Crop
     PlayerAvatar.Parent = PlayerInfo
     MakeCorner(PlayerAvatar, 13)
-    pcall(function()
-        PlayerAvatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..LocalPlayer.UserId.."&width=48&height=48&format=png"
+
+    -- Try multiple methods to load avatar
+    task.spawn(function()
+        local userId = LocalPlayer.UserId
+        local thumbOk, thumbContent = pcall(function()
+            return game:GetService("Players"):GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+        end)
+        if thumbOk and thumbContent then
+            PlayerAvatar.Image = thumbContent
+        else
+            pcall(function()
+                PlayerAvatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..userId.."&width=48&height=48&format=png"
+            end)
+        end
+        if PlayerAvatar.Image == "" then
+            pcall(function()
+                PlayerAvatar.Image = "rbxthumb://type=AvatarHeadShot&id="..userId.."&w=48&h=48"
+            end)
+        end
     end)
 
     -- Name (fixed width, clipped)
@@ -606,17 +624,17 @@ function HollowLib:CreateWindow(config)
                 local callback = cfg.Callback or function() end
                 local dragging = false
 
-                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,34), nil, Theme.ItemBG)
+                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,28), nil, Theme.ItemBG)
                 Container.BackgroundTransparency = 1
-                MakePadding(Container, 2, 2, 4, 4)
+                MakePadding(Container, 1, 1, 4, 4)
 
-                -- Label
-                local SliderLabel = MakeLabel(Container, cfg.Text or id, 11, Theme.TextDim, Enum.Font.Gotham)
-                SliderLabel.Size = UDim2.new(1,0,0,12)
+                -- Label + value on same row
+                local SliderLabel = MakeLabel(Container, cfg.Text or id, 10, Theme.TextDim, Enum.Font.Gotham)
+                SliderLabel.Size = UDim2.new(1,0,0,11)
 
-                -- Track (4px gap below label)
-                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,15), UDim2.new(0,0,0,16), Theme.SliderBG)
-                MakeCorner(SliderBG, 4) MakeStroke(SliderBG, Theme.Border, 1)
+                -- Compact track
+                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,12), UDim2.new(0,0,0,14), Theme.SliderBG)
+                MakeCorner(SliderBG, 3)
 
                 local alpha = (value-min)/(max-min)
 
@@ -624,7 +642,7 @@ function HollowLib:CreateWindow(config)
                 MakeCorner(SliderFill, 3)
 
                 -- Value text centered on bar
-                local ValueLabel = MakeLabel(SliderBG, tostring(value) .. suffix .. "/" .. tostring(max) .. suffix, 9, Theme.Text, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
+                local ValueLabel = MakeLabel(SliderBG, tostring(value) .. suffix .. "/" .. tostring(max) .. suffix, 8, Theme.Text, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
                 ValueLabel.Size = UDim2.new(1,0,1,0)
                 ValueLabel.TextYAlignment = Enum.TextYAlignment.Center
                 ValueLabel.ZIndex = 3
