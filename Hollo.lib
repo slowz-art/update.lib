@@ -532,7 +532,7 @@ function HollowLib:CreateWindow(config)
                 return Toggle
             end
 
-            -- ADD SLIDER (Thick filled bar with value/max overlay)
+            -- ADD SLIDER
             function Group:AddSlider(id, cfg)
                 local Slider = {}
                 local min = cfg.Min or 0 local max = cfg.Max or 100
@@ -541,25 +541,24 @@ function HollowLib:CreateWindow(config)
                 local callback = cfg.Callback or function() end
                 local dragging = false
 
-                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,32), nil, Theme.ItemBG)
+                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,30), nil, Theme.ItemBG)
                 Container.BackgroundTransparency = 1
-                MakePadding(Container, 2, 2, 4, 4)
+                MakePadding(Container, 1, 1, 4, 4)
 
                 -- Label
                 local SliderLabel = MakeLabel(Container, cfg.Text or id, 11, Theme.TextDim, Enum.Font.Gotham)
                 SliderLabel.Size = UDim2.new(1,0,0,13)
 
-                -- Track
-                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,13), UDim2.new(0,0,1,-3), Theme.SliderBG)
+                -- Track (positioned right below label)
+                local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,14), UDim2.new(0,0,0,14), Theme.SliderBG)
                 MakeCorner(SliderBG, 3) MakeStroke(SliderBG, Theme.Border, 1)
 
                 local alpha = (value-min)/(max-min)
 
-                -- Fill bar
                 local SliderFill = MakeFrame(SliderBG, UDim2.new(alpha,0,1,0), nil, Theme.SliderFill)
                 MakeCorner(SliderFill, 3)
 
-                -- Value text overlaid on bar
+                -- Value text centered on bar
                 local ValueLabel = MakeLabel(SliderBG, tostring(value) .. suffix .. "/" .. tostring(max) .. suffix, 9, Theme.Text, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
                 ValueLabel.Size = UDim2.new(1,0,1,0)
                 ValueLabel.TextYAlignment = Enum.TextYAlignment.Center
@@ -636,7 +635,7 @@ function HollowLib:CreateWindow(config)
                 return Btn
             end
 
-            -- ADD DROPDOWN
+            -- ADD DROPDOWN (scrollable text list, click outside to close)
             function Group:AddDropdown(id, cfg)
                 local Dropdown = {}
                 local values = cfg.Values or {}
@@ -645,58 +644,73 @@ function HollowLib:CreateWindow(config)
                 local multiSelected = {}
                 local open = false
                 local callback = cfg.Callback or function() end
+                local maxVisible = cfg.MaxVisible or 6
 
                 if type(selected) == "number" and values[selected] then selected = values[selected] end
 
                 local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,0), nil, Theme.ItemBG)
                 Container.BackgroundTransparency = 1
                 Container.AutomaticSize = Enum.AutomaticSize.Y
-                MakeCorner(Container, Radius.Item) MakePadding(Container, 3, 3, 4, 4)
+                MakePadding(Container, 2, 2, 4, 4)
 
-                local Header = MakeButton(Container, UDim2.new(1,0,0,26), nil, Theme.DropBG)
+                local Header = MakeButton(Container, UDim2.new(1,0,0,24), nil, Theme.DropBG)
                 Header.BackgroundTransparency = 1
-                MakeCorner(Header, Radius.Small) MakeStroke(Header, Theme.Border, 1)
+                MakeCorner(Header, 4) MakeStroke(Header, Theme.Border, 1)
 
                 local DropLabel = MakeLabel(Header, cfg.Text or id, 9, Theme.TextDim, Enum.Font.Gotham)
-                DropLabel.Size = UDim2.new(1,-28,0,11) DropLabel.Position = UDim2.new(0,8,0,2)
+                DropLabel.Size = UDim2.new(1,-24,0,10) DropLabel.Position = UDim2.new(0,6,0,2)
 
                 local SelectedLabel = MakeLabel(Header, tostring(selected), 10, Theme.Text, Enum.Font.GothamMedium)
-                SelectedLabel.Size = UDim2.new(1,-28,0,12) SelectedLabel.Position = UDim2.new(0,8,0,13)
+                SelectedLabel.Size = UDim2.new(1,-24,0,11) SelectedLabel.Position = UDim2.new(0,6,0,12)
 
                 local DropArrow = Instance.new("ImageLabel")
-                DropArrow.Size = UDim2.new(0,12,0,12)
-                DropArrow.Position = UDim2.new(1,-18,0.5,-6)
+                DropArrow.Size = UDim2.new(0,10,0,10)
+                DropArrow.Position = UDim2.new(1,-14,0.5,-5)
                 DropArrow.BackgroundTransparency = 1
                 DropArrow.Image = "rbxassetid://6031091004"
                 DropArrow.ImageColor3 = Theme.TextDim
                 DropArrow.ScaleType = Enum.ScaleType.Fit
                 DropArrow.Parent = Header
 
-                local OptionList = MakeFrame(Container, UDim2.new(1,0,0,0), UDim2.new(0,0,0,32), Theme.DropOpen)
-                OptionList.BackgroundTransparency = 1
-                OptionList.AutomaticSize = Enum.AutomaticSize.Y OptionList.ClipsDescendants = true
-                OptionList.Visible = false OptionList.ZIndex = 10
-                MakeCorner(OptionList, Radius.Small) MakeStroke(OptionList, Theme.Border, 1)
-                MakePadding(OptionList, 4, 4, 4, 4) MakeList(OptionList, 3)
+                -- Scrollable option list
+                local listH = math.min(#values, maxVisible) * 20 + 6
+                local OptionScroll = Instance.new("ScrollingFrame")
+                OptionScroll.Size = UDim2.new(1,0,0,listH)
+                OptionScroll.Position = UDim2.new(0,0,0,28)
+                OptionScroll.BackgroundColor3 = Theme.DropOpen
+                OptionScroll.BackgroundTransparency = 0.1
+                OptionScroll.BorderSizePixel = 0
+                OptionScroll.ScrollBarThickness = 2
+                OptionScroll.ScrollBarImageColor3 = Theme.ScrollBar
+                OptionScroll.CanvasSize = UDim2.new(0,0,0,0)
+                OptionScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+                OptionScroll.Visible = false
+                OptionScroll.ZIndex = 10
+                OptionScroll.Parent = Container
+                MakeCorner(OptionScroll, 4) MakeStroke(OptionScroll, Theme.Border, 1)
+                MakePadding(OptionScroll, 3, 3, 3, 3)
+                MakeList(OptionScroll, 1)
+
+                local function CloseDropdown()
+                    open = false
+                    OptionScroll.Visible = false
+                    Tween(DropArrow, {Rotation=0}, 0.2)
+                    DropArrow.ImageColor3 = Theme.TextDim
+                end
 
                 local function BuildOptions()
-                    for _, c in pairs(OptionList:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+                    for _, c in pairs(OptionScroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
                     for _, val in ipairs(values) do
                         local isSel = (multi and multiSelected[val]) or (not multi and selected == val)
-                        local Opt = MakeButton(OptionList, UDim2.new(1,0,0,22), nil, isSel and Theme.AccentDark or Theme.DropBG)
-                        MakeCorner(Opt, Radius.Small)
-                        local OptLabel = MakeLabel(Opt, tostring(val), 10, isSel and Theme.Text or Theme.TextDim, Enum.Font.GothamMedium)
-                        OptLabel.Size = UDim2.new(1,-8,1,0) OptLabel.Position = UDim2.new(0,8,0,0)
+                        local Opt = MakeButton(OptionScroll, UDim2.new(1,0,0,18), nil, isSel and Theme.AccentDark or Theme.DropBG)
+                        Opt.BackgroundTransparency = isSel and 0.3 or 1
+                        MakeCorner(Opt, 3)
+                        local OptLabel = MakeLabel(Opt, tostring(val), 10, isSel and Theme.Text or Theme.TextDim, Enum.Font.Gotham)
+                        OptLabel.Size = UDim2.new(1,-6,1,0) OptLabel.Position = UDim2.new(0,6,0,0)
                         OptLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-                        if multi and isSel then
-                            local Check = MakeLabel(Opt, "*", 12, Theme.Accent, Enum.Font.GothamBold, Enum.TextXAlignment.Right)
-                            Check.Size = UDim2.new(0,18,1,0) Check.Position = UDim2.new(1,-20,0,0)
-                            Check.TextYAlignment = Enum.TextYAlignment.Center
-                        end
-
-                        Opt.MouseEnter:Connect(function() if not isSel then Tween(Opt,{BackgroundColor3=Theme.GroupHeader},0.1) end end)
-                        Opt.MouseLeave:Connect(function() if not isSel then Tween(Opt,{BackgroundColor3=Theme.DropBG},0.1) end end)
+                        Opt.MouseEnter:Connect(function() Tween(OptLabel,{TextColor3=Theme.Text},0.1) end)
+                        Opt.MouseLeave:Connect(function() if not isSel then Tween(OptLabel,{TextColor3=Theme.TextDim},0.1) end end)
                         Opt.MouseButton1Click:Connect(function()
                             if multi then
                                 multiSelected[val] = not multiSelected[val]
@@ -705,24 +719,39 @@ function HollowLib:CreateWindow(config)
                                 callback(result)
                             else
                                 selected = val SelectedLabel.Text = tostring(val) callback(val)
-                                open = false OptionList.Visible = false Tween(DropArrow,{Rotation=0},0.2)
+                                CloseDropdown()
                             end
                             BuildOptions()
                         end)
                     end
+                    listH = math.min(#values, maxVisible) * 20 + 6
+                    OptionScroll.Size = UDim2.new(1,0,0,listH)
                 end
 
                 Header.MouseButton1Click:Connect(function()
-                    open = not open OptionList.Visible = open
-                    Tween(DropArrow, {Rotation=open and 180 or 0}, 0.25, Enum.EasingStyle.Quint)
-                    if open then
-                        DropArrow.ImageColor3 = Theme.Accent
-                    else
-                        DropArrow.ImageColor3 = Theme.TextDim
-                    end
-                    BuildOptions()
+                    open = not open OptionScroll.Visible = open
+                    Tween(DropArrow, {Rotation=open and 180 or 0}, 0.2)
+                    DropArrow.ImageColor3 = open and Theme.Accent or Theme.TextDim
+                    if open then BuildOptions() end
                 end)
                 BuildOptions()
+
+                -- Close when clicking outside
+                UserInputService.InputBegan:Connect(function(input)
+                    if not open then return end
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        task.defer(function()
+                            local pos = input.Position
+                            local hAbs = Header.AbsolutePosition
+                            local hSz = Header.AbsoluteSize
+                            local oAbs = OptionScroll.AbsolutePosition
+                            local oSz = OptionScroll.AbsoluteSize
+                            local inHeader = pos.X >= hAbs.X and pos.X <= hAbs.X+hSz.X and pos.Y >= hAbs.Y and pos.Y <= hAbs.Y+hSz.Y
+                            local inList = pos.X >= oAbs.X and pos.X <= oAbs.X+oSz.X and pos.Y >= oAbs.Y and pos.Y <= oAbs.Y+oSz.Y
+                            if not inHeader and not inList then CloseDropdown() end
+                        end)
+                    end
+                end)
 
                 function Dropdown:SetValues(v) values=v BuildOptions() end
                 function Dropdown:SetValue(v) selected=v SelectedLabel.Text=tostring(v) callback(v) BuildOptions() end
@@ -923,11 +952,34 @@ function HollowLib:CreateWindow(config)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then hueDrag = false end
                 end)
 
+                local function CloseColorPicker()
+                    pickerOpen = false
+                    PickerPopup.Visible = false
+                end
+
                 ColorBtn.MouseButton1Click:Connect(function()
                     pickerOpen = not pickerOpen PickerPopup.Visible = pickerOpen
                     if pickerOpen then
                         local ap = ColorBtn.AbsolutePosition
                         PickerPopup.Position = UDim2.new(0, ap.X - popupW - 10, 0, ap.Y - 40)
+                    end
+                end)
+
+                -- Close when clicking outside
+                UserInputService.InputBegan:Connect(function(input)
+                    if not pickerOpen then return end
+                    if svDrag or hueDrag then return end
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        task.defer(function()
+                            local pos = input.Position
+                            local pAbs = PickerPopup.AbsolutePosition
+                            local pSz = PickerPopup.AbsoluteSize
+                            local bAbs = ColorBtn.AbsolutePosition
+                            local bSz = ColorBtn.AbsoluteSize
+                            local inPopup = pos.X >= pAbs.X and pos.X <= pAbs.X+pSz.X and pos.Y >= pAbs.Y and pos.Y <= pAbs.Y+pSz.Y
+                            local inBtn = pos.X >= bAbs.X and pos.X <= bAbs.X+bSz.X and pos.Y >= bAbs.Y and pos.Y <= bAbs.Y+bSz.Y
+                            if not inPopup and not inBtn then CloseColorPicker() end
+                        end)
                     end
                 end)
 
@@ -992,6 +1044,55 @@ function HollowLib:CreateWindow(config)
 
                 if cfg.Flag then HollowLib.Flags[cfg.Flag] = KB end
                 return KB
+            end
+
+            -- ADD TEXT INPUT
+            function Group:AddInput(id, cfg)
+                local Input = {}
+                local value = cfg.Default or ""
+                local callback = cfg.Callback or function() end
+                local placeholder = cfg.Placeholder or "Type here..."
+
+                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,22), nil, Theme.ItemBG)
+                Row.BackgroundTransparency = 1
+                MakePadding(Row, 0, 0, 4, 4)
+
+                local InputLabel = MakeLabel(Row, cfg.Text or id, 11, Theme.TextDim, Enum.Font.Gotham)
+                InputLabel.Size = UDim2.new(0.4,0,1,0) InputLabel.TextYAlignment = Enum.TextYAlignment.Center
+
+                local InputBox = Instance.new("TextBox")
+                InputBox.Size = UDim2.new(0.6,-2,0,16)
+                InputBox.Position = UDim2.new(0.4,2,0.5,-8)
+                InputBox.BackgroundColor3 = Theme.SliderBG
+                InputBox.BackgroundTransparency = 0.3
+                InputBox.BorderSizePixel = 0
+                InputBox.Text = value
+                InputBox.PlaceholderText = placeholder
+                InputBox.PlaceholderColor3 = Theme.TextDisabled
+                InputBox.TextColor3 = Theme.Text
+                InputBox.Font = Enum.Font.GothamMedium
+                InputBox.TextSize = 10
+                InputBox.ClearTextOnFocus = false
+                InputBox.Parent = Row
+                MakeCorner(InputBox, 4) MakeStroke(InputBox, Theme.Border, 1)
+
+                InputBox.FocusLost:Connect(function(enter)
+                    value = InputBox.Text
+                    callback(value, enter)
+                end)
+
+                InputBox.Focused:Connect(function()
+                    Tween(InputBox, {BackgroundTransparency=0.1}, 0.15)
+                end)
+                InputBox.FocusLost:Connect(function()
+                    Tween(InputBox, {BackgroundTransparency=0.3}, 0.15)
+                end)
+
+                function Input:SetValue(v) value = v InputBox.Text = v end
+                function Input:GetValue() return value end
+
+                if cfg.Flag then HollowLib.Flags[cfg.Flag] = Input end
+                return Input
             end
 
             return Group
