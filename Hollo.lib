@@ -274,8 +274,8 @@ function HollowLib:CreateWindow(config)
     MakeCorner(Content, Radius.Window)
 
     -- Sidebar
-    local sideExpanded = 124
-    local sideCollapsed = 36
+    local sideExpanded = 100
+    local sideCollapsed = 32
     local sideOpen = true
 
     local Sidebar = MakeFrame(Content, UDim2.new(0,sideExpanded,1,0), nil, Theme.Sidebar)
@@ -283,10 +283,6 @@ function HollowLib:CreateWindow(config)
     Sidebar.ClipsDescendants = true
     MakeCorner(Sidebar, Radius.Window)
     MakeStroke(Sidebar, Theme.Border, 1)
-
-    -- Accent line at top of sidebar
-    local SideAccent = MakeFrame(Sidebar, UDim2.new(0.6,0,0,2), UDim2.new(0.2,0,0,4), Theme.Accent)
-    MakeCorner(SideAccent, 1)
 
     local SideTitle = MakeLabel(Sidebar, "MENU", 9, Theme.TextDisabled, Enum.Font.GothamBold)
     SideTitle.Size = UDim2.new(1,-20,0,16) SideTitle.Position = UDim2.new(0,12,0,10)
@@ -483,8 +479,8 @@ function HollowLib:CreateWindow(config)
 
         -- Inner wrapper for spacing (no UIPadding - use real frame offsets)
         local InnerWrap = Instance.new("Frame")
-        InnerWrap.Size = UDim2.new(1,-38,0,0) -- 14 left + 24 right = 38
-        InnerWrap.Position = UDim2.new(0,14,0,14) -- 14px from left, 14px from top
+        InnerWrap.Size = UDim2.new(1,-20,0,0) -- 8 left + 12 right = 20
+        InnerWrap.Position = UDim2.new(0,8,0,10) -- 8px from left, 10px from top
         InnerWrap.BackgroundTransparency = 1
         InnerWrap.BorderSizePixel = 0
         InnerWrap.AutomaticSize = Enum.AutomaticSize.Y
@@ -496,18 +492,18 @@ function HollowLib:CreateWindow(config)
 
         local ColLayout = Instance.new("UIListLayout")
         ColLayout.FillDirection = Enum.FillDirection.Horizontal
-        ColLayout.Padding = UDim.new(0, 16)
+        ColLayout.Padding = UDim.new(0, 10)
         ColLayout.SortOrder = Enum.SortOrder.LayoutOrder
         ColLayout.VerticalAlignment = Enum.VerticalAlignment.Top
         ColLayout.Parent = ColHolder
 
-        local LeftCol = MakeFrame(ColHolder, UDim2.new(0.5,-8,0,0), nil, Theme.Background, 1)
+        local LeftCol = MakeFrame(ColHolder, UDim2.new(0.5,-5,0,0), nil, Theme.Background, 1)
         LeftCol.AutomaticSize = Enum.AutomaticSize.Y
-        MakeList(LeftCol, 10)
+        MakeList(LeftCol, 8)
 
-        local RightCol = MakeFrame(ColHolder, UDim2.new(0.5,-8,0,0), nil, Theme.Background, 1)
+        local RightCol = MakeFrame(ColHolder, UDim2.new(0.5,-5,0,0), nil, Theme.Background, 1)
         RightCol.AutomaticSize = Enum.AutomaticSize.Y
-        MakeList(RightCol, 10)
+        MakeList(RightCol, 8)
 
         -- Bottom spacer so scroll canvas has room at the end
         local BottomSpacer = Instance.new("Frame")
