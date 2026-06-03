@@ -1344,6 +1344,18 @@ function HollowLib:CreateWindow(config)
         function Tab:AddRightGroupbox(name) return AddGroupInternal(name, RightCol) end
         function Tab:AddGroupbox(name) return AddGroupInternal(name, LeftCol) end
 
+        -- TabBox compatibility (LinoriaLib) - TabBox tabs act as groupboxes
+        function Tab:AddLeftTabbox()
+            local TabBox = {}
+            function TabBox:AddTab(tabName) return AddGroupInternal(tabName, LeftCol) end
+            return TabBox
+        end
+        function Tab:AddRightTabbox()
+            local TabBox = {}
+            function TabBox:AddTab(tabName) return AddGroupInternal(tabName, RightCol) end
+            return TabBox
+        end
+
         return Tab
     end
 
