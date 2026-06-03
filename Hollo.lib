@@ -163,16 +163,41 @@ function HollowLib:CreateWindow(config)
 
     -- Main Frame
     local Main = MakeFrame(ScreenGui, UDim2.new(0,curW,0,curH), UDim2.new(0.5,-curW/2,0.5,-curH/2), Theme.Background)
-    Main.Name = "HollowWindow" Main.ClipsDescendants = false
-    Main.BackgroundTransparency = 0.3
+    Main.Name = "HollowWindow" Main.ClipsDescendants = true
+    Main.BackgroundTransparency = 0.15
     MakeCorner(Main, Radius.Window) MakeStroke(Main, Theme.Border, 1)
+
+    -- Custom background image (covers entire UI, semi-transparent)
+    local BGImage = Instance.new("ImageLabel")
+    BGImage.Name = "BackgroundImage"
+    BGImage.Size = UDim2.new(1,0,1,0)
+    BGImage.Position = UDim2.new(0,0,0,0)
+    BGImage.BackgroundTransparency = 1
+    BGImage.ImageTransparency = 0.65
+    BGImage.ScaleType = Enum.ScaleType.Crop
+    BGImage.ZIndex = 0
+    BGImage.BorderSizePixel = 0
+    BGImage.Parent = Main
+    MakeCorner(BGImage, Radius.Window)
+    if config.Background then
+        local bgId = tostring(config.Background)
+        if tonumber(bgId) then bgId = "rbxassetid://" .. bgId end
+        BGImage.Image = bgId
+    end
+
+    -- Shadow (outside clip)
+    local ShadowHolder = Instance.new("Frame")
+    ShadowHolder.Size = UDim2.new(1,0,1,0)
+    ShadowHolder.BackgroundTransparency = 1
+    ShadowHolder.ClipsDescendants = false
+    ShadowHolder.Parent = Main
 
     -- Shadow
     local Shadow = Instance.new("ImageLabel")
     Shadow.Image = "rbxassetid://6014261993" Shadow.ImageColor3 = Color3.new(0,0,0)
     Shadow.ImageTransparency = 0.5 Shadow.Size = UDim2.new(1,40,1,40)
     Shadow.Position = UDim2.new(0,-20,0,-20) Shadow.BackgroundTransparency = 1
-    Shadow.ZIndex = -1 Shadow.Parent = Main
+    Shadow.ZIndex = -1 Shadow.Parent = ShadowHolder
 
     -- Topbar
     local Topbar = Instance.new("Frame")
@@ -574,8 +599,8 @@ function HollowLib:CreateWindow(config)
             local ItemContainer = MakeFrame(GroupFrame, UDim2.new(1,0,0,0), UDim2.new(0,0,0,28), Theme.GroupBG)
             ItemContainer.AutomaticSize = Enum.AutomaticSize.Y
             ItemContainer.BackgroundTransparency = 1
-            MakeCorner(ItemContainer, Radius.Group) MakePadding(ItemContainer, 6, 8, 6, 6)
-            MakeList(ItemContainer, 5)
+            MakeCorner(ItemContainer, Radius.Group) MakePadding(ItemContainer, 8, 10, 8, 8)
+            MakeList(ItemContainer, 6)
 
             -- ADD TOGGLE (Clean checkbox style)
             function Group:AddToggle(id, cfg)
@@ -583,7 +608,7 @@ function HollowLib:CreateWindow(config)
                 local state = cfg.Default or false
                 local callback = cfg.Callback or function() end
 
-                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,20), nil, Theme.ItemBG)
+                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,24), nil, Theme.ItemBG)
                 Row.BackgroundTransparency = 1
                 MakePadding(Row, 0, 0, 4, 4)
 
@@ -736,7 +761,7 @@ function HollowLib:CreateWindow(config)
                     callback = function() end
                 end
 
-                local Btn = MakeButton(ItemContainer, UDim2.new(1,0,0,22), nil, Theme.ItemBG)
+                local Btn = MakeButton(ItemContainer, UDim2.new(1,0,0,26), nil, Theme.ItemBG)
                 Btn.BackgroundTransparency = 1
                 MakePadding(Btn, 0, 0, 4, 4)
 
@@ -989,7 +1014,7 @@ function HollowLib:CreateWindow(config)
                 local callback = cfg.Callback or function() end
                 local pickerOpen = false
 
-                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,20), nil, Theme.ItemBG)
+                local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,24), nil, Theme.ItemBG)
                 Container.BackgroundTransparency = 1
                 MakePadding(Container, 0, 0, 4, 4)
 
@@ -1211,7 +1236,7 @@ function HollowLib:CreateWindow(config)
                 local callback = cfg.Callback or function() end
                 local listening = false
 
-                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,22), nil, Theme.ItemBG)
+                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,26), nil, Theme.ItemBG)
                 Row.BackgroundTransparency = 1
                 MakeCorner(Row, Radius.Item) MakePadding(Row, 0, 0, 4, 4)
 
@@ -1271,7 +1296,7 @@ function HollowLib:CreateWindow(config)
                 local callback = cfg.Callback or function() end
                 local placeholder = cfg.Placeholder or "Type here..."
 
-                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,22), nil, Theme.ItemBG)
+                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,26), nil, Theme.ItemBG)
                 Row.BackgroundTransparency = 1
                 MakePadding(Row, 0, 0, 4, 4)
 
@@ -1336,7 +1361,7 @@ function HollowLib:CreateWindow(config)
                 local callback = cfg.Callback or function() end
                 local value = ""
 
-                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,22), nil, Theme.ItemBG)
+                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,26), nil, Theme.ItemBG)
                 Row.BackgroundTransparency = 1
                 MakePadding(Row, 0, 0, 4, 4)
 
@@ -1496,6 +1521,12 @@ function HollowLib:CreateWindow(config)
     function Window:SetDisplayName(name) PlayerName.Text = name end
     function Window:SetUsername(name) end
     function Window:SetLogo(textureId) LogoImg.Image = "rbxassetid://"..tostring(textureId) end
+    function Window:SetBackground(textureId, transparency)
+        local id = tostring(textureId)
+        if tonumber(id) then id = "rbxassetid://" .. id end
+        BGImage.Image = id
+        BGImage.ImageTransparency = transparency or 0.65
+    end
     function Window:SetAccent(color)
         Theme.Accent = color
         Theme.AccentDark = Color3.fromRGB(math.floor(color.R*180), math.floor(color.G*180), math.floor(color.B*180))
@@ -1504,6 +1535,47 @@ function HollowLib:CreateWindow(config)
         Theme.TabActive = color
         WMBar.BackgroundColor3 = color
     end
+
+    -- Resize handle (bottom-right corner)
+    local ResizeHandle = Instance.new("TextButton")
+    ResizeHandle.Size = UDim2.new(0,16,0,16)
+    ResizeHandle.Position = UDim2.new(1,-16,1,-16)
+    ResizeHandle.BackgroundTransparency = 1
+    ResizeHandle.Text = ""
+    ResizeHandle.ZIndex = 10
+    ResizeHandle.Parent = Main
+
+    -- Resize dots visual
+    local ResizeDots = MakeLabel(ResizeHandle, "...", 10, Theme.TextDisabled, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
+    ResizeDots.Size = UDim2.new(1,0,1,0) ResizeDots.TextYAlignment = Enum.TextYAlignment.Bottom
+    ResizeDots.Rotation = -45
+
+    do
+        local resizing = false
+        local startInput, startSize
+        ResizeHandle.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                resizing = true
+                startInput = input.Position
+                startSize = Main.AbsoluteSize
+            end
+        end)
+        UIS.InputChanged:Connect(function(input)
+            if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - startInput
+                local newW = math.max(minW, startSize.X + delta.X)
+                local newH = math.max(minH, startSize.Y + delta.Y)
+                curW = newW curH = newH
+                Main.Size = UDim2.new(0, newW, 0, newH)
+            end
+        end)
+        UIS.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                resizing = false
+            end
+        end)
+    end
+
     function Window:Unload()
         ScreenGui:Destroy()
         if getgenv()._HollowUnload then getgenv()._HollowUnload() end
