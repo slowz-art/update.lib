@@ -1182,8 +1182,18 @@ function HollowLib:CreateWindow(config)
 
             -- ADD KEYBIND PICKER
             function Group:AddKeybindPicker(id, cfg)
+                cfg = cfg or {}
                 local KB = {}
-                local key = cfg.Default or Enum.KeyCode.RightControl
+                -- Handle empty string, string key names, or nil defaults
+                local key = cfg.Default
+                if not key or key == '' or type(key) == 'string' then
+                    if type(key) == 'string' and key ~= '' then
+                        pcall(function() key = Enum.KeyCode[key] end)
+                    end
+                    if not key or type(key) ~= 'userdata' then
+                        key = Enum.KeyCode.Unknown
+                    end
+                end
                 local callback = cfg.Callback or function() end
                 local listening = false
 
@@ -1198,7 +1208,9 @@ function HollowLib:CreateWindow(config)
                 KBBtn.BackgroundTransparency = 1
                 MakeCorner(KBBtn, Radius.Small) MakeStroke(KBBtn, Theme.Border, 1)
 
-                local KBText = MakeLabel(KBBtn, tostring(key.Name), 9, Theme.Accent, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
+                local keyName = "None"
+                pcall(function() keyName = key.Name end)
+                local KBText = MakeLabel(KBBtn, keyName, 9, Theme.Accent, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
                 KBText.Size = UDim2.new(1,0,1,0) KBText.TextYAlignment = Enum.TextYAlignment.Center
 
                 KBBtn.MouseButton1Click:Connect(function()
