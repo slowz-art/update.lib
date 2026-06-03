@@ -326,15 +326,17 @@ function HollowLib:CreateWindow(config)
     TabContent.BackgroundTransparency = 1
     TabContent.ClipsDescendants = true
 
-    -- Sidebar auto-collapse (desktop only, smoother)
+    -- Sidebar collapse/expand (desktop only)
+    local allTabLabels = {}
     if not isMobile then
         local function CollapseSidebar()
             if not sideOpen then return end
             sideOpen = false
-            Tween(Sidebar, {Size=UDim2.new(0,sideCollapsed,1,0)}, 0.35, Enum.EasingStyle.Quint)
-            Tween(TabContent, {Size=UDim2.new(1,-sideCollapsed,1,0), Position=UDim2.new(0,sideCollapsed,0,0)}, 0.35, Enum.EasingStyle.Quint)
-            Tween(SideTitle, {TextTransparency=1}, 0.2)
-            Tween(PlayerName, {TextTransparency=1}, 0.2)
+            Tween(Sidebar, {Size=UDim2.new(0,sideCollapsed,1,0)}, 0.3, Enum.EasingStyle.Quint)
+            Tween(TabContent, {Size=UDim2.new(1,-sideCollapsed,1,0), Position=UDim2.new(0,sideCollapsed,0,0)}, 0.3, Enum.EasingStyle.Quint)
+            Tween(SideTitle, {TextTransparency=1}, 0.15)
+            Tween(PlayerName, {TextTransparency=1}, 0.15)
+            for _, lbl in ipairs(allTabLabels) do Tween(lbl, {TextTransparency=1}, 0.15) end
         end
 
         local function ExpandSidebar()
@@ -342,12 +344,20 @@ function HollowLib:CreateWindow(config)
             sideOpen = true
             Tween(Sidebar, {Size=UDim2.new(0,sideExpanded,1,0)}, 0.3, Enum.EasingStyle.Quint)
             Tween(TabContent, {Size=UDim2.new(1,-sideExpanded,1,0), Position=UDim2.new(0,sideExpanded,0,0)}, 0.3, Enum.EasingStyle.Quint)
-            Tween(SideTitle, {TextTransparency=0}, 0.25)
-            Tween(PlayerName, {TextTransparency=0}, 0.25)
+            Tween(SideTitle, {TextTransparency=0}, 0.2)
+            Tween(PlayerName, {TextTransparency=0}, 0.2)
+            for _, lbl in ipairs(allTabLabels) do Tween(lbl, {TextTransparency=0}, 0.2) end
         end
 
+        -- Expand on sidebar click/hover
         Sidebar.MouseEnter:Connect(ExpandSidebar)
-        Sidebar.MouseLeave:Connect(CollapseSidebar)
+
+        -- Collapse when clicking in the content area
+        TabContent.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                CollapseSidebar()
+            end
+        end)
     end
 
     -- ===== WATERMARK =====
@@ -451,6 +461,7 @@ function HollowLib:CreateWindow(config)
 
         local TabLabel = MakeLabel(TabBtn, name, 11, Theme.TextDim, Enum.Font.GothamMedium)
         TabLabel.Size = UDim2.new(1,-32,1,0) TabLabel.Position = UDim2.new(0,26,0,0)
+        table.insert(allTabLabels, TabLabel)
 
         -- Tab page with TWO COLUMN layout (CanvasGroup for smooth fade)
         local TabPage = Instance.new("CanvasGroup")
@@ -575,7 +586,7 @@ function HollowLib:CreateWindow(config)
             ItemContainer.AutomaticSize = Enum.AutomaticSize.Y
             ItemContainer.BackgroundTransparency = 1
             MakeCorner(ItemContainer, Radius.Group) MakePadding(ItemContainer, 6, 8, 6, 6)
-            MakeList(ItemContainer, 3)
+            MakeList(ItemContainer, 5)
 
             -- ADD TOGGLE (Clean checkbox style)
             function Group:AddToggle(id, cfg)
@@ -1296,7 +1307,15 @@ function HollowLib:CreateWindow(config)
 
                 InputBox.FocusLost:Connect(function(enter)
                     value = InputBox.Text
+                    Input.Value = value
                     callback(value, enter)
+                end)
+
+                -- Live text change tracking for search functionality
+                InputBox:GetPropertyChangedSignal("Text"):Connect(function()
+                    value = InputBox.Text
+                    Input.Value = value
+                    if Input._onChanged then Input._onChanged() end
                 end)
 
                 InputBox.Focused:Connect(function()
@@ -1306,8 +1325,9 @@ function HollowLib:CreateWindow(config)
                     Tween(InputBox, {BackgroundTransparency=0.3}, 0.15)
                 end)
 
-                function Input:SetValue(v) value = v InputBox.Text = v end
+                function Input:SetValue(v) value = v InputBox.Text = v Input.Value = v end
                 function Input:GetValue() return value end
+                function Input:OnChanged(fn) Input._onChanged = fn end
 
                 Input.Value = value
                 if cfg.Flag then
