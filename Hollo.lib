@@ -21,6 +21,20 @@ if not getgenv then
     getgenv = function() return _G end
 end
 
+-- Global env for Options/Toggles (must be before CreateWindow)
+local env = getgenv()
+
+-- Safe dummy object for accessing unregistered flags
+local SafeDummy = {}
+SafeDummy.Value = nil
+function SafeDummy:SetValue() end
+function SafeDummy:SetValues() end
+function SafeDummy:GetValue() return nil end
+function SafeDummy:OnChanged() end
+
+if not env.Options then env.Options = setmetatable({}, {__index = function() return SafeDummy end}) end
+if not env.Toggles then env.Toggles = setmetatable({}, {__index = function() return SafeDummy end}) end
+
 local Theme = {
     Background  = Color3.fromRGB(10, 10, 12),
     Sidebar     = Color3.fromRGB(14, 14, 17),
@@ -626,8 +640,8 @@ function HollowLib:CreateWindow(config)
 
                 if cfg.Flag then
                     HollowLib.Flags[cfg.Flag] = Toggle
-                    if _G.Toggles then _G.Toggles[cfg.Flag] = Toggle end
-                    if _G.Options then _G.Options[cfg.Flag] = Toggle end
+                    if env.Toggles then env.Toggles[cfg.Flag] = Toggle end
+                    if env.Options then env.Options[cfg.Flag] = Toggle end
                 end
                 return Toggle
             end
@@ -703,7 +717,7 @@ function HollowLib:CreateWindow(config)
 
                 if cfg.Flag then
                     HollowLib.Flags[cfg.Flag] = Slider
-                    if _G.Options then _G.Options[cfg.Flag] = Slider end
+                    if env.Options then env.Options[cfg.Flag] = Slider end
                 end
                 return Slider
             end
@@ -935,7 +949,7 @@ function HollowLib:CreateWindow(config)
 
                 if cfg.Flag then
                     HollowLib.Flags[cfg.Flag] = Dropdown
-                    if _G.Options then _G.Options[cfg.Flag] = Dropdown end
+                    if env.Options then env.Options[cfg.Flag] = Dropdown end
                 end
                 return Dropdown
             end
@@ -1175,7 +1189,7 @@ function HollowLib:CreateWindow(config)
                 ColorPicker.Value = color
                 if cfg.Flag then
                     HollowLib.Flags[cfg.Flag] = ColorPicker
-                    if _G.Options then _G.Options[cfg.Flag] = ColorPicker end
+                    if env.Options then env.Options[cfg.Flag] = ColorPicker end
                 end
                 return ColorPicker
             end
@@ -1245,7 +1259,7 @@ function HollowLib:CreateWindow(config)
                 KB.Value = key
                 if cfg.Flag then
                     HollowLib.Flags[cfg.Flag] = KB
-                    if _G.Options then _G.Options[cfg.Flag] = KB end
+                    if env.Options then env.Options[cfg.Flag] = KB end
                 end
                 return KB
             end
@@ -1298,7 +1312,7 @@ function HollowLib:CreateWindow(config)
                 Input.Value = value
                 if cfg.Flag then
                     HollowLib.Flags[cfg.Flag] = Input
-                    if _G.Options then _G.Options[cfg.Flag] = Input end
+                    if env.Options then env.Options[cfg.Flag] = Input end
                 end
                 return Input
             end
@@ -1470,12 +1484,9 @@ end
 -- Usage: local Library = loadstring(...)() works the same way
 
 -- Global tables for LinoriaLib compat
-if not _G.Options then _G.Options = {} end
-if not _G.Toggles then _G.Toggles = {} end
-
--- Make Options/Toggles accessible as globals
-Options = _G.Options
-Toggles = _G.Toggles
+-- Global tables already set up at top of file
+Options = env.Options
+Toggles = env.Toggles
 
 -- Library wrapper
 local Library = setmetatable({}, {__index = HollowLib})
