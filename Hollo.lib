@@ -182,8 +182,8 @@ function HollowLib:CreateWindow(config)
     local LogoImg = Instance.new("ImageLabel")
     LogoImg.Name = "Logo"
     LogoImg.Image = config.Logo or "rbxassetid://87465223885645"
-    LogoImg.Size = UDim2.new(0,42,0,42)
-    LogoImg.Position = UDim2.new(0,4,0.5,-21)
+    LogoImg.Size = UDim2.new(0,50,0,50)
+    LogoImg.Position = UDim2.new(0,2,0.5,-25)
     LogoImg.BackgroundTransparency = 1
     LogoImg.BorderSizePixel = 0
     LogoImg.ScaleType = Enum.ScaleType.Fit
@@ -193,7 +193,7 @@ function HollowLib:CreateWindow(config)
     -- Title
     local TitleLabel = MakeLabel(Topbar, config.Title or "HollowLib", 14, Theme.Text, Enum.Font.GothamBold)
     TitleLabel.Size = UDim2.new(1, isMobile and -140 or -100, 1, 0)
-    TitleLabel.Position = UDim2.new(0, 50, 0, 0) TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
+    TitleLabel.Position = UDim2.new(0, 54, 0, 0) TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
 
     -- Topbar buttons helper
     local topBtnOffset = -30
@@ -221,7 +221,7 @@ function HollowLib:CreateWindow(config)
     -- Mobile only: floating draggable buttons on the left
     if isMobile then
         -- Toggle UI button
-        local TogFloat = MakeButton(ScreenGui, UDim2.new(0,70,0,26), UDim2.new(0,12,0.45,0), Theme.Watermark)
+        local TogFloat = MakeButton(ScreenGui, UDim2.new(0,70,0,26), UDim2.new(0,12,0.22,0), Theme.Watermark)
         TogFloat.BackgroundTransparency = 0.3
         MakeCorner(TogFloat, 8) MakeStroke(TogFloat, Theme.Border, 1)
         local TogFloatL = MakeLabel(TogFloat, "Toggle UI", 9, Theme.TextDim, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
@@ -234,7 +234,7 @@ function HollowLib:CreateWindow(config)
         end)
 
         -- Lock UI button
-        local LockFloat = MakeButton(ScreenGui, UDim2.new(0,62,0,26), UDim2.new(0,12,0.45,30), Theme.Watermark)
+        local LockFloat = MakeButton(ScreenGui, UDim2.new(0,62,0,26), UDim2.new(0,12,0.22,30), Theme.Watermark)
         LockFloat.BackgroundTransparency = 0.3
         MakeCorner(LockFloat, 8) MakeStroke(LockFloat, Theme.Border, 1)
         local LockFloatL = MakeLabel(LockFloat, "Lock UI", 9, Theme.TextDim, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
@@ -265,13 +265,18 @@ function HollowLib:CreateWindow(config)
     local sideOpen = true
 
     local Sidebar = MakeFrame(Content, UDim2.new(0,sideExpanded,1,0), nil, Theme.Sidebar)
-    Sidebar.BackgroundTransparency = 1
+    Sidebar.BackgroundTransparency = 0.95
     Sidebar.ClipsDescendants = true
     MakeCorner(Sidebar, Radius.Window)
     MakeStroke(Sidebar, Theme.Border, 1)
 
-    local SideTitle = MakeLabel(Sidebar, "NAVIGATION", 9, Theme.TextDisabled, Enum.Font.GothamBold)
-    SideTitle.Size = UDim2.new(1,-20,0,18) SideTitle.Position = UDim2.new(0,12,0,10)
+    -- Accent line at top of sidebar
+    local SideAccent = MakeFrame(Sidebar, UDim2.new(0.6,0,0,2), UDim2.new(0.2,0,0,4), Theme.Accent)
+    MakeCorner(SideAccent, 1)
+
+    local SideTitle = MakeLabel(Sidebar, "MENU", 9, Theme.TextDisabled, Enum.Font.GothamBold)
+    SideTitle.Size = UDim2.new(1,-20,0,16) SideTitle.Position = UDim2.new(0,12,0,10)
+    SideTitle.TextXAlignment = Enum.TextXAlignment.Center
 
     local TabList = MakeFrame(Sidebar, UDim2.new(1,0,1,-46), UDim2.new(0,0,0,32), Theme.Sidebar)
     TabList.BackgroundTransparency = 1
@@ -307,27 +312,29 @@ function HollowLib:CreateWindow(config)
     TabContent.BackgroundTransparency = 1
     TabContent.ClipsDescendants = true
 
-    -- Sidebar auto-collapse on mouse leave / touch outside
-    local function CollapseSidebar()
-        if not sideOpen then return end
-        sideOpen = false
-        Tween(Sidebar, {Size=UDim2.new(0,sideCollapsed,1,0)}, 0.25, Enum.EasingStyle.Quint)
-        Tween(TabContent, {Size=UDim2.new(1,-sideCollapsed,1,0), Position=UDim2.new(0,sideCollapsed,0,0)}, 0.25, Enum.EasingStyle.Quint)
-        Tween(SideTitle, {TextTransparency=1}, 0.15)
-        Tween(PlayerName, {TextTransparency=1}, 0.15)
-    end
+    -- Sidebar auto-collapse (desktop only, smoother)
+    if not isMobile then
+        local function CollapseSidebar()
+            if not sideOpen then return end
+            sideOpen = false
+            Tween(Sidebar, {Size=UDim2.new(0,sideCollapsed,1,0)}, 0.35, Enum.EasingStyle.Quint)
+            Tween(TabContent, {Size=UDim2.new(1,-sideCollapsed,1,0), Position=UDim2.new(0,sideCollapsed,0,0)}, 0.35, Enum.EasingStyle.Quint)
+            Tween(SideTitle, {TextTransparency=1}, 0.2)
+            Tween(PlayerName, {TextTransparency=1}, 0.2)
+        end
 
-    local function ExpandSidebar()
-        if sideOpen then return end
-        sideOpen = true
-        Tween(Sidebar, {Size=UDim2.new(0,sideExpanded,1,0)}, 0.25, Enum.EasingStyle.Quint)
-        Tween(TabContent, {Size=UDim2.new(1,-sideExpanded,1,0), Position=UDim2.new(0,sideExpanded,0,0)}, 0.25, Enum.EasingStyle.Quint)
-        Tween(SideTitle, {TextTransparency=0}, 0.2)
-        Tween(PlayerName, {TextTransparency=0}, 0.2)
-    end
+        local function ExpandSidebar()
+            if sideOpen then return end
+            sideOpen = true
+            Tween(Sidebar, {Size=UDim2.new(0,sideExpanded,1,0)}, 0.3, Enum.EasingStyle.Quint)
+            Tween(TabContent, {Size=UDim2.new(1,-sideExpanded,1,0), Position=UDim2.new(0,sideExpanded,0,0)}, 0.3, Enum.EasingStyle.Quint)
+            Tween(SideTitle, {TextTransparency=0}, 0.25)
+            Tween(PlayerName, {TextTransparency=0}, 0.25)
+        end
 
-    Sidebar.MouseEnter:Connect(ExpandSidebar)
-    Sidebar.MouseLeave:Connect(CollapseSidebar)
+        Sidebar.MouseEnter:Connect(ExpandSidebar)
+        Sidebar.MouseLeave:Connect(CollapseSidebar)
+    end
 
     -- ===== WATERMARK =====
     local wmName = config.WatermarkName or "hollowoodz"
@@ -1305,49 +1312,50 @@ function HollowLib:CreateWindow(config)
         -- Push existing notifs up
         for _, nf in ipairs(notifStack) do
             local cur = nf.Position
-            Tween(nf, {Position=UDim2.new(cur.X.Scale,cur.X.Offset,cur.Y.Scale,cur.Y.Offset-58)}, 0.35, Enum.EasingStyle.Quint)
+            Tween(nf, {Position=UDim2.new(cur.X.Scale,cur.X.Offset,cur.Y.Scale,cur.Y.Offset-56)}, 0.35, Enum.EasingStyle.Quint)
         end
 
         -- Container
-        local NF = MakeFrame(ScreenGui, UDim2.new(0,270,0,52), UDim2.new(1,12,1,-66), Theme.Background)
-        NF.BackgroundTransparency = 0.15
+        local NF = MakeFrame(ScreenGui, UDim2.new(0,250,0,48), UDim2.new(1,12,1,-60), Theme.Background)
+        NF.BackgroundTransparency = 0.08
         NF.ClipsDescendants = true
-        MakeCorner(NF, Radius.Group)
-        local NFStroke = MakeStroke(NF, Theme.Border, 1)
+        MakeCorner(NF, 10)
+        local NFStroke = MakeStroke(NF, Theme.Accent, 1)
+        NFStroke.Transparency = 0.6
 
         -- Left accent bar
-        local NBar = MakeFrame(NF, UDim2.new(0,3,1,-12), UDim2.new(0,8,0,6), Theme.Accent)
+        local NBar = MakeFrame(NF, UDim2.new(0,3,1,-10), UDim2.new(0,6,0,5), Theme.Accent)
         MakeCorner(NBar, 2)
 
-        -- Title text
+        -- Title
         local NTitle = MakeLabel(NF, title, 11, Theme.Text, Enum.Font.GothamBold)
-        NTitle.Size = UDim2.new(1,-28,0,15) NTitle.Position = UDim2.new(0,18,0,7)
+        NTitle.Size = UDim2.new(1,-24,0,14) NTitle.Position = UDim2.new(0,16,0,6)
 
-        -- Description text
-        local NDesc = MakeLabel(NF, desc, 10, Theme.TextDim, Enum.Font.GothamMedium)
-        NDesc.Size = UDim2.new(1,-28,0,14) NDesc.Position = UDim2.new(0,18,0,24)
+        -- Description
+        local NDesc = MakeLabel(NF, desc, 9, Theme.TextDim, Enum.Font.Gotham)
+        NDesc.Size = UDim2.new(1,-24,0,13) NDesc.Position = UDim2.new(0,16,0,22)
         NDesc.TextWrapped = true
 
-        -- Bottom progress bar (drains over time)
+        -- Bottom progress bar
         local NProgress = MakeFrame(NF, UDim2.new(1,0,0,2), UDim2.new(0,0,1,-2), Theme.Accent)
-        NProgress.BackgroundTransparency = 0.4
+        NProgress.BackgroundTransparency = 0.5
+        MakeCorner(NProgress, 1)
 
         table.insert(notifStack, 1, NF)
 
-        -- Slide in with bounce
-        Tween(NF, {Position=UDim2.new(1,-282,1,-66)}, 0.45, Enum.EasingStyle.Quint)
-        Tween(NFStroke, {Color=Theme.BorderBright}, 0.3)
+        -- Slide in
+        Tween(NF, {Position=UDim2.new(1,-262,1,-60)}, 0.4, Enum.EasingStyle.Quint)
 
-        -- Start draining after slide-in completes
-        task.delay(0.5, function()
+        -- Drain progress bar
+        task.delay(0.45, function()
             Tween(NProgress, {Size=UDim2.new(0,0,0,2)}, duration - 0.5, Enum.EasingStyle.Linear)
         end)
 
-        -- Fade and slide out
+        -- Fade out
         task.delay(duration, function()
-            Tween(NF, {Position=UDim2.new(1,12,1,-66), BackgroundTransparency=0.8}, 0.4, Enum.EasingStyle.Quint)
-            Tween(NFStroke, {Transparency=0.8}, 0.3)
-            task.wait(0.45)
+            Tween(NF, {Position=UDim2.new(1,12,1,-60)}, 0.35, Enum.EasingStyle.Quint)
+            Tween(NFStroke, {Transparency=1}, 0.3)
+            task.wait(0.4)
             for i, v in ipairs(notifStack) do if v == NF then table.remove(notifStack, i) break end end
             NF:Destroy()
         end)
