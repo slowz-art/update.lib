@@ -1370,6 +1370,29 @@ function HollowLib:CreateWindow(config)
                 return SearchBar
             end
 
+            -- Wrap all Group:Add methods in pcall for resilience
+            local SafeReturn = {Value = nil}
+            function SafeReturn:SetValue() end
+            function SafeReturn:SetValues() end
+            function SafeReturn:GetValue() return nil end
+            function SafeReturn:OnChanged() end
+            function SafeReturn:AddColorPicker() return SafeReturn end
+            function SafeReturn:AddKeyPicker() return SafeReturn end
+            function SafeReturn:SetText() end
+
+            local rawGroup = {}
+            for k, v in pairs(Group) do rawGroup[k] = v end
+            for methodName, method in pairs(rawGroup) do
+                if type(method) == "function" and methodName:sub(1,3) == "Add" then
+                    Group[methodName] = function(self, ...)
+                        local ok, result = pcall(method, self, ...)
+                        if ok then return result end
+                        warn("[HollowLib] " .. methodName .. " error: " .. tostring(result))
+                        return SafeReturn
+                    end
+                end
+            end
+
             return Group
         end
 
