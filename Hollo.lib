@@ -275,7 +275,7 @@ function HollowLib:CreateWindow(config)
 
     -- Sidebar
     local sideExpanded = 100
-    local sideCollapsed = 32
+    local sideCollapsed = 42
     local sideOpen = true
 
     local Sidebar = MakeFrame(Content, UDim2.new(0,sideExpanded,1,0), nil, Theme.Sidebar)
@@ -1301,16 +1301,20 @@ function HollowLib:CreateWindow(config)
                 InputBox.Parent = Row
                 MakeCorner(InputBox, 4) MakeStroke(InputBox, Theme.Border, 1)
 
+                local finished = cfg.Finished
+                if finished == nil then finished = true end
+
                 InputBox.FocusLost:Connect(function(enter)
                     value = InputBox.Text
                     Input.Value = value
                     callback(value, enter)
                 end)
 
-                -- Live text change tracking for search functionality
+                -- Live text change - fires callback and OnChanged on every keystroke
                 InputBox:GetPropertyChangedSignal("Text"):Connect(function()
                     value = InputBox.Text
                     Input.Value = value
+                    if not finished then callback(value, false) end
                     if Input._onChanged then Input._onChanged() end
                 end)
 
