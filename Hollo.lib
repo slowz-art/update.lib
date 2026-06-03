@@ -819,19 +819,19 @@ function HollowLib:CreateWindow(config)
                 local OptionScroll = Instance.new("ScrollingFrame")
                 OptionScroll.Size = UDim2.new(1,0,0,listH)
                 OptionScroll.Position = UDim2.new(0,0,0,28 + searchH)
-                OptionScroll.BackgroundColor3 = Theme.DropOpen
-                OptionScroll.BackgroundTransparency = 0.1
+                OptionScroll.BackgroundColor3 = Theme.Background
+                OptionScroll.BackgroundTransparency = 0.05
                 OptionScroll.BorderSizePixel = 0
-                OptionScroll.ScrollBarThickness = 2
+                OptionScroll.ScrollBarThickness = 3
                 OptionScroll.ScrollBarImageColor3 = Theme.ScrollBar
                 OptionScroll.CanvasSize = UDim2.new(0,0,0,0)
                 OptionScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
                 OptionScroll.Visible = false
                 OptionScroll.ZIndex = 10
                 OptionScroll.Parent = Container
-                MakeCorner(OptionScroll, 4) MakeStroke(OptionScroll, Theme.Border, 1)
-                MakePadding(OptionScroll, 3, 3, 3, 3)
-                MakeList(OptionScroll, 1)
+                MakeCorner(OptionScroll, 6) MakeStroke(OptionScroll, Theme.BorderBright, 1)
+                MakePadding(OptionScroll, 4, 4, 4, 4)
+                MakeList(OptionScroll, 2)
 
                 local function CloseDropdown()
                     open = false
@@ -845,6 +845,7 @@ function HollowLib:CreateWindow(config)
                     filter = filter or ""
                     for _, c in pairs(OptionScroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
                     local count = 0
+                    if not values then values = {} end
                     for _, val in ipairs(values) do
                         local str = tostring(val):lower()
                         if filter == "" or str:find(filter:lower(), 1, true) then
@@ -866,7 +867,7 @@ function HollowLib:CreateWindow(config)
                                     SelectedLabel.Text = #result>0 and table.concat(result,", ") or "None"
                                     callback(result)
                                 else
-                                    selected = val SelectedLabel.Text = tostring(val) callback(val)
+                                    selected = val SelectedLabel.Text = tostring(val) Dropdown.Value = val callback(val)
                                     CloseDropdown()
                                 end
                                 BuildOptions(searchFilter)
@@ -917,13 +918,19 @@ function HollowLib:CreateWindow(config)
                     end
                 end)
 
-                function Dropdown:SetValues(v) values=v BuildOptions() end
-                function Dropdown:SetValue(v) selected=v SelectedLabel.Text=tostring(v) Dropdown.Value=v callback(v) BuildOptions() end
+                function Dropdown:SetValues(v)
+                    if v then values = v end
+                    if Dropdown.Values then values = Dropdown.Values end
+                    Dropdown.Values = values
+                    BuildOptions(searchFilter)
+                end
+                function Dropdown:SetValue(v) selected=v SelectedLabel.Text=tostring(v) Dropdown.Value=v callback(v) BuildOptions(searchFilter) end
                 function Dropdown:GetValue()
                     if multi then local r={} for k,v in pairs(multiSelected) do if v then table.insert(r,k) end end return r end
                     return selected
                 end
                 Dropdown.Value = selected
+                Dropdown.Values = values
                 function Dropdown:OnChanged(fn) callback = fn end
 
                 if cfg.Flag then
