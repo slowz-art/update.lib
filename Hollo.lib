@@ -312,7 +312,7 @@ function HollowLib:CreateWindow(config)
     MakeList(TabList, 5) MakePadding(TabList, 4, 6, 10, 10)
 
     -- Display name at bottom of sidebar
-    local PlayerInfo = MakeFrame(Sidebar, UDim2.new(1,0,0,40), UDim2.new(0,0,1,-40), Theme.Sidebar)
+    local PlayerInfo = MakeFrame(Sidebar, UDim2.new(1,0,0,44), UDim2.new(0,0,1,-44), Theme.Sidebar)
     PlayerInfo.BackgroundTransparency = 1
     MakeStroke(PlayerInfo, Theme.Border, 1)
     MakePadding(PlayerInfo, 6, 6, 10, 10)
@@ -323,7 +323,7 @@ function HollowLib:CreateWindow(config)
     PlayerAvatar.Position = UDim2.new(0,0,0.5,-13)
     PlayerAvatar.BackgroundColor3 = Theme.GroupBG
     PlayerAvatar.BorderSizePixel = 0
-    PlayerAvatar.ScaleType = Enum.ScaleType.Crop
+    PlayerAvatar.ScaleType = Enum.ScaleType.Fit
     PlayerAvatar.Image = "rbxthumb://type=AvatarHeadShot&id="..LocalPlayer.UserId.."&w=150&h=150"
     PlayerAvatar.Parent = PlayerInfo
     MakeCorner(PlayerAvatar, 13)
