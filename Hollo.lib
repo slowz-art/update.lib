@@ -957,6 +957,7 @@ function HollowLib:CreateWindow(config)
                 local multiSelected = {}
                 local open = false
                 local callback = cfg.Callback or function() end
+                local dropOnChanged = nil
                 local maxVisible = cfg.MaxVisible or 6
 
                 if type(selected) == "number" and values[selected] then selected = values[selected] end
@@ -1129,7 +1130,6 @@ function HollowLib:CreateWindow(config)
                     if multi then local r={} for k,v in pairs(multiSelected) do if v then table.insert(r,k) end end return r end
                     return selected
                 end
-                local dropOnChanged = nil
                 Dropdown.Value = selected
                 Dropdown.Values = values
                 function Dropdown:OnChanged(fn) dropOnChanged = fn end
