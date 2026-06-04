@@ -615,6 +615,129 @@ function HollowLib:CreateWindow(config)
             MakeCorner(ItemContainer, Radius.Group) MakePadding(ItemContainer, 8, 10, 8, 8)
             MakeList(ItemContainer, 6)
 
+            -- Dependency system: show/hide elements based on other element values
+            local dependencyChecks = {}
+            local function AddDependencySupport(element, row)
+                element._row = row
+                function element:SetupDependencies(deps)
+                    if not deps or #deps == 0 then return end
+                    local function CheckDeps()
+                        for _, dep in ipairs(deps) do
+                            local target = dep[1]
+                            local required = dep[2]
+                            if target and target.Value ~= required then
+                                row.Visible = false
+                                return
+                            end
+                        end
+                        row.Visible = true
+                    end
+                    table.insert(dependencyChecks, CheckDeps)
+                    CheckDeps()
+                end
+            end
+
+            -- Run all dependency checks when any value changes
+            local function RunDependencyChecks()
+                for _, check in ipairs(dependencyChecks) do
+                    pcall(check)
+                end
+            end
+
+            -- ADD DEPENDENCY BOX - container that shows/hides based on dependencies
+            function Group:AddDependencyBox()
+                local DepBox = {}
+                local DepFrame = MakeFrame(ItemContainer, UDim2.new(1,0,0,0), nil, Theme.ItemBG)
+                DepFrame.BackgroundTransparency = 1
+                pcall(function() DepFrame.AutomaticSize = Enum.AutomaticSize.Y end)
+                MakeList(DepFrame, 6)
+
+                function DepBox:SetupDependencies(deps)
+                    if not deps or #deps == 0 then return end
+                    local function CheckDeps()
+                        for _, dep in ipairs(deps) do
+                            local target = dep[1]
+                            local required = dep[2]
+                            if target and target.Value ~= required then
+                                DepFrame.Visible = false
+                                return
+                            end
+                        end
+                        DepFrame.Visible = true
+                    end
+                    table.insert(dependencyChecks, CheckDeps)
+                    CheckDeps()
+                end
+
+                -- Clone all Add methods from Group but parent to DepFrame instead
+                -- We do this by creating a proxy that redirects ItemContainer
+                local origContainer = ItemContainer
+
+                function DepBox:AddToggle(id, cfg)
+                    ItemContainer = DepFrame
+                    local result = Group:AddToggle(id, cfg)
+                    ItemContainer = origContainer
+                    return result
+                end
+                function DepBox:AddSlider(id, cfg)
+                    ItemContainer = DepFrame
+                    local result = Group:AddSlider(id, cfg)
+                    ItemContainer = origContainer
+                    return result
+                end
+                function DepBox:AddButton(a, b)
+                    ItemContainer = DepFrame
+                    local result = Group:AddButton(a, b)
+                    ItemContainer = origContainer
+                    return result
+                end
+                function DepBox:AddDropdown(id, cfg)
+                    ItemContainer = DepFrame
+                    local result = Group:AddDropdown(id, cfg)
+                    ItemContainer = origContainer
+                    return result
+                end
+                function DepBox:AddInput(id, cfg)
+                    ItemContainer = DepFrame
+                    local result = Group:AddInput(id, cfg)
+                    ItemContainer = origContainer
+                    return result
+                end
+                function DepBox:AddLabel(text)
+                    ItemContainer = DepFrame
+                    local result = Group:AddLabel(text)
+                    ItemContainer = origContainer
+                    return result
+                end
+                function DepBox:AddColorPicker(id, cfg)
+                    ItemContainer = DepFrame
+                    local result = Group:AddColorPicker(id, cfg)
+                    ItemContainer = origContainer
+                    return result
+                end
+                function DepBox:AddKeybindPicker(id, cfg)
+                    ItemContainer = DepFrame
+                    local result = Group:AddKeybindPicker(id, cfg)
+                    ItemContainer = origContainer
+                    return result
+                end
+                DepBox.AddKeyPicker = DepBox.AddKeybindPicker
+                function DepBox:AddDivider()
+                    ItemContainer = DepFrame
+                    local result = Group:AddDivider()
+                    ItemContainer = origContainer
+                    return result
+                end
+                function DepBox:AddSearchBar(cfg)
+                    ItemContainer = DepFrame
+                    local result = Group:AddSearchBar(cfg)
+                    ItemContainer = origContainer
+                    return result
+                end
+
+                return DepBox
+            end
+
             -- ADD TOGGLE (Clean checkbox style)
             function Group:AddToggle(id, cfg)
                 local Toggle = {}
@@ -675,11 +798,19 @@ function HollowLib:CreateWindow(config)
                 function Toggle:AddColorPicker(pid, pcfg) return Group:AddColorPicker(pid, pcfg) end
                 function Toggle:AddKeyPicker(pid, pcfg) return Group:AddKeybindPicker(pid, pcfg) end
                 function Toggle:OnChanged(fn) callback = fn end
+                AddDependencySupport(Toggle, Row)
 
-                if cfg.Flag then
-                    HollowLib.Flags[cfg.Flag] = Toggle
-                    if env.Toggles then env.Toggles[cfg.Flag] = Toggle end
-                    if env.Options then env.Options[cfg.Flag] = Toggle end
+                -- Fire dependency checks when toggle changes
+                local origSetState = SetState
+                SetState = function(newState, skipCb)
+                    origSetState(newState, skipCb)
+                    RunDependencyChecks()
+                end
+
+                if id then
+                    HollowLib.Flags[id] = Toggle
+                    if env.Toggles then env.Toggles[id] = Toggle end
+                    if env.Options then env.Options[id] = Toggle end
                 end
                 return Toggle
             end
@@ -753,10 +884,11 @@ function HollowLib:CreateWindow(config)
                 Slider.Value = value
                 function Slider:OnChanged(fn) callback = fn end
 
-                if cfg.Flag then
-                    HollowLib.Flags[cfg.Flag] = Slider
-                    if env.Options then env.Options[cfg.Flag] = Slider end
+                if id then
+                    HollowLib.Flags[id] = Slider
+                    if env.Options then env.Options[id] = Slider end
                 end
+                AddDependencySupport(Slider, Row)
                 return Slider
             end
 
@@ -975,7 +1107,7 @@ function HollowLib:CreateWindow(config)
                     Dropdown.Values = values
                     BuildOptions(searchFilter)
                 end
-                function Dropdown:SetValue(v) selected=v SelectedLabel.Text=tostring(v) Dropdown.Value=v callback(v) BuildOptions(searchFilter) end
+                function Dropdown:SetValue(v) selected=v SelectedLabel.Text=tostring(v) Dropdown.Value=v callback(v) BuildOptions(searchFilter) RunDependencyChecks() end
                 function Dropdown:GetValue()
                     if multi then local r={} for k,v in pairs(multiSelected) do if v then table.insert(r,k) end end return r end
                     return selected
@@ -984,10 +1116,11 @@ function HollowLib:CreateWindow(config)
                 Dropdown.Values = values
                 function Dropdown:OnChanged(fn) callback = fn end
 
-                if cfg.Flag then
-                    HollowLib.Flags[cfg.Flag] = Dropdown
-                    if env.Options then env.Options[cfg.Flag] = Dropdown end
+                if id then
+                    HollowLib.Flags[id] = Dropdown
+                    if env.Options then env.Options[id] = Dropdown end
                 end
+                AddDependencySupport(Dropdown, Container)
                 return Dropdown
             end
 
@@ -1007,6 +1140,7 @@ function HollowLib:CreateWindow(config)
                 function Label:SetText(t) LabelText.Text = t end
                 Label.Text = LabelText
 
+                AddDependencySupport(Label, Row)
                 return Label
             end
 
@@ -1224,10 +1358,11 @@ function HollowLib:CreateWindow(config)
                 function ColorPicker:GetValue() return color end
 
                 ColorPicker.Value = color
-                if cfg.Flag then
-                    HollowLib.Flags[cfg.Flag] = ColorPicker
-                    if env.Options then env.Options[cfg.Flag] = ColorPicker end
+                if id then
+                    HollowLib.Flags[id] = ColorPicker
+                    if env.Options then env.Options[id] = ColorPicker end
                 end
+                AddDependencySupport(ColorPicker, Container)
                 return ColorPicker
             end
 
@@ -1294,10 +1429,11 @@ function HollowLib:CreateWindow(config)
                 function KB:GetValue() return key end
 
                 KB.Value = key
-                if cfg.Flag then
-                    HollowLib.Flags[cfg.Flag] = KB
-                    if env.Options then env.Options[cfg.Flag] = KB end
+                if id then
+                    HollowLib.Flags[id] = KB
+                    if env.Options then env.Options[id] = KB end
                 end
+                AddDependencySupport(KB, Row)
                 return KB
             end
 
@@ -1360,10 +1496,11 @@ function HollowLib:CreateWindow(config)
                 function Input:OnChanged(fn) Input._onChanged = fn end
 
                 Input.Value = value
-                if cfg.Flag then
-                    HollowLib.Flags[cfg.Flag] = Input
-                    if env.Options then env.Options[cfg.Flag] = Input end
+                if id then
+                    HollowLib.Flags[id] = Input
+                    if env.Options then env.Options[id] = Input end
                 end
+                AddDependencySupport(Input, Row)
                 return Input
             end
 
@@ -1416,7 +1553,7 @@ function HollowLib:CreateWindow(config)
                 function SearchBar:GetValue() return value end
                 function SearchBar:Clear() value = "" SearchInput.Text = "" end
 
-                if cfg.Flag then HollowLib.Flags[cfg.Flag] = SearchBar end
+                if cfg.Flag then HollowLib.Flags[cfg.Flag] = SearchBar if env.Options then env.Options[cfg.Flag] = SearchBar end end
                 return SearchBar
             end
 
