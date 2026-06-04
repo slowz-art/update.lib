@@ -390,7 +390,7 @@ function HollowLib:CreateWindow(config)
     local WMName = MakeLabel(Watermark, wmName, 10, Theme.Text, Enum.Font.GothamBold)
     WMName.Size = UDim2.new(0,72,1,0) WMName.Position = UDim2.new(0,14,0,0)
     WMName.TextYAlignment = Enum.TextYAlignment.Center
-    WMName.AutomaticSize = Enum.AutomaticSize.X
+    pcall(function() WMName.AutomaticSize = Enum.AutomaticSize.X end)
 
     -- Separator dot
     local WMDot1 = MakeFrame(Watermark, UDim2.new(0,3,0,3), UDim2.new(0,88,0.5,-1), Theme.TextDisabled)
@@ -477,13 +477,19 @@ function HollowLib:CreateWindow(config)
         TabLabel.Size = UDim2.new(1,-32,1,0) TabLabel.Position = UDim2.new(0,26,0,0)
         table.insert(allTabLabels, TabLabel)
 
-        -- Tab page with TWO COLUMN layout (CanvasGroup for smooth fade)
-        local TabPage = Instance.new("CanvasGroup")
+        -- Tab page with TWO COLUMN layout (CanvasGroup for smooth fade, fallback to Frame)
+        local TabPage
+        local useCanvasGroup = pcall(function()
+            TabPage = Instance.new("CanvasGroup")
+            TabPage.GroupTransparency = 0
+        end)
+        if not useCanvasGroup then
+            TabPage = Instance.new("Frame")
+        end
         TabPage.Size = UDim2.new(1,0,1,0)
         TabPage.Position = UDim2.new(0,0,0,0)
         TabPage.BackgroundTransparency = 1
         TabPage.BorderSizePixel = 0
-        TabPage.GroupTransparency = 0
         TabPage.Visible = false
         TabPage.ClipsDescendants = true
         TabPage.Parent = TabContent
@@ -492,7 +498,8 @@ function HollowLib:CreateWindow(config)
         TabScroll.Size = UDim2.new(1,0,1,0)
         TabScroll.BackgroundTransparency = 1 TabScroll.BorderSizePixel = 0
         TabScroll.ScrollBarThickness = 3 TabScroll.ScrollBarImageColor3 = Theme.ScrollBar
-        TabScroll.CanvasSize = UDim2.new(0,0,0,0) TabScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        TabScroll.CanvasSize = UDim2.new(0,0,0,9999)
+        pcall(function() pcall(function() TabScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y end) end)
         TabScroll.Parent = TabPage
 
         -- Inner wrapper for spacing (no UIPadding - use real frame offsets)
@@ -501,12 +508,12 @@ function HollowLib:CreateWindow(config)
         InnerWrap.Position = UDim2.new(0,8,0,10) -- 8px from left, 10px from top
         InnerWrap.BackgroundTransparency = 1
         InnerWrap.BorderSizePixel = 0
-        InnerWrap.AutomaticSize = Enum.AutomaticSize.Y
+        pcall(function() InnerWrap.AutomaticSize = Enum.AutomaticSize.Y end)
         InnerWrap.Parent = TabScroll
 
         -- Two column container
         local ColHolder = MakeFrame(InnerWrap, UDim2.new(1,0,0,0), nil, Theme.Background, 1)
-        ColHolder.AutomaticSize = Enum.AutomaticSize.Y
+        pcall(function() ColHolder.AutomaticSize = Enum.AutomaticSize.Y end)
 
         local ColLayout = Instance.new("UIListLayout")
         ColLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -516,11 +523,11 @@ function HollowLib:CreateWindow(config)
         ColLayout.Parent = ColHolder
 
         local LeftCol = MakeFrame(ColHolder, UDim2.new(0.5,-5,0,0), nil, Theme.Background, 1)
-        LeftCol.AutomaticSize = Enum.AutomaticSize.Y
+        pcall(function() LeftCol.AutomaticSize = Enum.AutomaticSize.Y end)
         MakeList(LeftCol, 8)
 
         local RightCol = MakeFrame(ColHolder, UDim2.new(0.5,-5,0,0), nil, Theme.Background, 1)
-        RightCol.AutomaticSize = Enum.AutomaticSize.Y
+        pcall(function() RightCol.AutomaticSize = Enum.AutomaticSize.Y end)
         MakeList(RightCol, 8)
 
         -- Bottom spacer so scroll canvas has room at the end
@@ -542,8 +549,10 @@ function HollowLib:CreateWindow(config)
             if ActiveTab and ActiveTab ~= Tab then ActiveTab:_deactivate() end
             isActive = true ActiveTab = Tab
             TabPage.Visible = true
-            TabPage.GroupTransparency = 1
-            Tween(TabPage, {GroupTransparency=0}, 0.2, Enum.EasingStyle.Quint)
+            if useCanvasGroup then
+                TabPage.GroupTransparency = 1
+                Tween(TabPage, {GroupTransparency=0}, 0.2, Enum.EasingStyle.Quint)
+            end
             TabScroll.CanvasPosition = Vector2.new(0, 0)
             Tween(TabBtn, {BackgroundColor3=Theme.TabHover}, 0.2, Enum.EasingStyle.Quint)
             Tween(TabLabel, {TextColor3=Theme.Text}, 0.2, Enum.EasingStyle.Quint)
@@ -557,8 +566,12 @@ function HollowLib:CreateWindow(config)
             Tween(TabLabel, {TextColor3=Theme.TextDim}, 0.2, Enum.EasingStyle.Quint)
             Tween(TabIcon, {[iconColorProp]=Theme.TextDim}, 0.2, Enum.EasingStyle.Quint)
             Tween(TabIndicator, {BackgroundTransparency=1, Size=UDim2.new(0,3,0,10)}, 0.2, Enum.EasingStyle.Quint)
-            Tween(TabPage, {GroupTransparency=1}, 0.15, Enum.EasingStyle.Quint)
-            task.delay(0.15, function() if not isActive then TabPage.Visible = false end end)
+            if useCanvasGroup then
+                Tween(TabPage, {GroupTransparency=1}, 0.15, Enum.EasingStyle.Quint)
+                task.delay(0.15, function() if not isActive then TabPage.Visible = false end end)
+            else
+                TabPage.Visible = false
+            end
         end
 
         TabBtn.MouseEnter:Connect(function()
@@ -578,7 +591,7 @@ function HollowLib:CreateWindow(config)
             local Group = {}
 
             local GroupFrame = MakeFrame(col, UDim2.new(1,0,0,0), nil, Theme.GroupBG)
-            GroupFrame.AutomaticSize = Enum.AutomaticSize.Y
+            pcall(function() GroupFrame.AutomaticSize = Enum.AutomaticSize.Y end)
             GroupFrame.BackgroundTransparency = 1
             MakeCorner(GroupFrame, Radius.Group) MakeStroke(GroupFrame, Theme.Border, 1)
             GroupFrame.ClipsDescendants = false
@@ -597,7 +610,7 @@ function HollowLib:CreateWindow(config)
             GroupTitle.TextYAlignment = Enum.TextYAlignment.Center
 
             local ItemContainer = MakeFrame(GroupFrame, UDim2.new(1,0,0,0), UDim2.new(0,0,0,28), Theme.GroupBG)
-            ItemContainer.AutomaticSize = Enum.AutomaticSize.Y
+            pcall(function() ItemContainer.AutomaticSize = Enum.AutomaticSize.Y end)
             ItemContainer.BackgroundTransparency = 1
             MakeCorner(ItemContainer, Radius.Group) MakePadding(ItemContainer, 8, 10, 8, 8)
             MakeList(ItemContainer, 6)
@@ -805,7 +818,7 @@ function HollowLib:CreateWindow(config)
 
                 local Container = MakeFrame(ItemContainer, UDim2.new(1,0,0,0), nil, Theme.ItemBG)
                 Container.BackgroundTransparency = 1
-                Container.AutomaticSize = Enum.AutomaticSize.Y
+                pcall(function() Container.AutomaticSize = Enum.AutomaticSize.Y end)
                 MakePadding(Container, 2, 2, 4, 4)
 
                 local Header = MakeButton(Container, UDim2.new(1,0,0,24), nil, Theme.DropBG)
@@ -864,7 +877,7 @@ function HollowLib:CreateWindow(config)
                 OptionScroll.ScrollBarThickness = 3
                 OptionScroll.ScrollBarImageColor3 = Theme.ScrollBar
                 OptionScroll.CanvasSize = UDim2.new(0,0,0,0)
-                OptionScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+                pcall(function() OptionScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y end)
                 OptionScroll.Visible = false
                 OptionScroll.ZIndex = 10
                 OptionScroll.Parent = Container
