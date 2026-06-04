@@ -959,7 +959,6 @@ function HollowLib:CreateWindow(config)
 
                 function Dropdown:SetValues(v)
                     if v then values = v end
-                    if Dropdown.Values then values = Dropdown.Values end
                     Dropdown.Values = values
                     BuildOptions(searchFilter)
                 end
