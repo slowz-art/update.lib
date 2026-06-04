@@ -1517,6 +1517,7 @@ function HollowLib:CreateWindow(config)
 
     function Window:SetWatermark(text) WMName.Text = text end
     function Window:SetWatermarkVisibility(visible) Watermark.Visible = visible end
+    function Window:SetHideKey(key) hideKey = key end
     function Window:SetDisplayName(name) PlayerName.Text = name end
     function Window:SetUsername(name) end
     function Window:SetLogo(textureId) LogoImg.Image = "rbxassetid://"..tostring(textureId) end
@@ -1596,11 +1597,26 @@ Options = env.Options
 Toggles = env.Toggles
 
 -- Library wrapper
-local Library = setmetatable({}, {__index = HollowLib})
-Library.Flags = HollowLib.Flags
-Library.ToggleKeybind = nil
-
 local _createdWindow = nil
+local _unloadCallbacks = {}
+
+local Library = setmetatable({}, {
+    __index = function(t, k)
+        if k == "Options" then return Options end
+        if k == "Toggles" then return Toggles end
+        if k == "Flags" then return HollowLib.Flags end
+        return HollowLib[k]
+    end,
+    __newindex = function(t, k, v)
+        if k == "ToggleKeybind" and _createdWindow and v then
+            pcall(function() _createdWindow:SetHideKey(v) end)
+        end
+        if k == "OnUnload" and type(v) == "function" then
+            table.insert(_unloadCallbacks, v)
+        end
+        rawset(t, k, v)
+    end
+})
 
 function Library:CreateWindow(config)
     local win = HollowLib:CreateWindow(config)
@@ -1621,10 +1637,14 @@ function Library:SetWatermarkVisibility(visible)
 end
 
 function Library:Unload()
+    for _, fn in ipairs(_unloadCallbacks) do pcall(fn) end
     if _createdWindow then _createdWindow:Unload() end
 end
 
 function Library:OnUnload(callback)
+    if type(callback) == "function" then
+        table.insert(_unloadCallbacks, callback)
+    end
     if _createdWindow then _createdWindow:OnUnload(callback) end
 end
 
