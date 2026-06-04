@@ -1610,19 +1610,39 @@ function HollowLib:CreateWindow(config)
 
         -- TRUE TabBox - single box with switchable tab headers
         local function CreateTabBox(col)
-            -- Outer frame
+            -- Create ONE real group to get all Add methods with proper closures
+            local baseGroup = AddGroupInternal("_tabbox_base", col)
+
+            -- Find and hide the auto-created groupbox
+            local hiddenFrame = nil
+            for i = #col:GetChildren(), 1, -1 do
+                local ch = col:GetChildren()[i]
+                if ch:IsA("Frame") then
+                    local hdr = ch:FindFirstChildWhichIsA("TextLabel")
+                    if hdr and hdr.Text == "_tabbox_base" then
+                        hiddenFrame = ch
+                        ch.Visible = false
+                        ch.Size = UDim2.new(0,0,0,0)
+                        pcall(function() ch.AutomaticSize = Enum.AutomaticSize.None end)
+                        break
+                    end
+                end
+            end
+
+            -- Outer TabBox frame
             local TBFrame = MakeFrame(col, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
             pcall(function() TBFrame.AutomaticSize = Enum.AutomaticSize.Y end)
             TBFrame.ClipsDescendants = true
             MakeCorner(TBFrame, Radius.Group)
             MakeStroke(TBFrame, Theme.Border, 1)
 
-            -- Header with tab buttons
+            -- Header row
             local TBHeader = MakeFrame(TBFrame, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
             TBHeader.BackgroundTransparency = 0.5
             local hl = Instance.new("UIListLayout")
             hl.FillDirection = Enum.FillDirection.Horizontal
-            hl.Padding = UDim.new(0,0) hl.Parent = TBHeader
+            hl.Padding = UDim.new(0,0)
+            hl.Parent = TBHeader
 
             local tbTabs = {}
             local TBObj = {}
@@ -1630,18 +1650,21 @@ function HollowLib:CreateWindow(config)
             function TBObj:AddTab(tabName)
                 local idx = #tbTabs + 1
 
-                -- Tab header button
+                -- Header button
                 local tbBtn = Instance.new("TextButton")
-                tbBtn.BackgroundTransparency = 1 tbBtn.Text = tabName
-                tbBtn.Font = Enum.Font.GothamMedium tbBtn.TextSize = 11
+                tbBtn.BackgroundTransparency = 1
+                tbBtn.Text = tabName
+                tbBtn.Font = Enum.Font.GothamMedium
+                tbBtn.TextSize = 11
                 tbBtn.TextColor3 = idx == 1 and Theme.Text or Theme.TextDim
-                tbBtn.BorderSizePixel = 0 tbBtn.Parent = TBHeader
+                tbBtn.BorderSizePixel = 0
+                tbBtn.Parent = TBHeader
 
                 local tbLine = MakeFrame(tbBtn, UDim2.new(0.5,0,0,2), UDim2.new(0.25,0,1,-2), Theme.Accent)
                 MakeCorner(tbLine, 1)
                 tbLine.BackgroundTransparency = idx == 1 and 0 or 1
 
-                -- Content frame for this tab
+                -- Content frame
                 local tbContent = MakeFrame(TBFrame, UDim2.new(1,0,0,0), UDim2.new(0,0,0,28), Theme.GroupBG)
                 tbContent.BackgroundTransparency = 1
                 pcall(function() tbContent.AutomaticSize = Enum.AutomaticSize.Y end)
@@ -1650,11 +1673,8 @@ function HollowLib:CreateWindow(config)
                 MakeList(tbContent, 6)
 
                 table.insert(tbTabs, {btn=tbBtn, content=tbContent, line=tbLine})
-
-                -- Resize buttons equally
                 for _, t in ipairs(tbTabs) do t.btn.Size = UDim2.new(1/#tbTabs, 0, 1, 0) end
 
-                -- Switch tabs on click
                 tbBtn.MouseButton1Click:Connect(function()
                     for _, t in ipairs(tbTabs) do
                         t.content.Visible = false
@@ -1666,58 +1686,35 @@ function HollowLib:CreateWindow(config)
                     Tween(tbLine, {BackgroundTransparency=0}, 0.15)
                 end)
 
-                -- Create a hidden group to get all the Add methods with proper closures
-                local hiddenGroup = AddGroupInternal("_h_"..tabName..idx, col)
-
-                -- Hide the auto-created groupbox frame
-                for i = #col:GetChildren(), 1, -1 do
-                    local ch = col:GetChildren()[i]
-                    if ch:IsA("Frame") and ch ~= TBFrame then
-                        -- Check if this is the one we just created
-                        local header = ch:FindFirstChildWhichIsA("TextLabel")
-                        if header and header.Text == "_h_"..tabName..idx then
-                            ch.Visible = false
-                            ch.Size = UDim2.new(0,0,0,0)
-                            pcall(function() ch.AutomaticSize = Enum.AutomaticSize.None end)
-                            break
-                        end
-                    end
-                end
-
-                -- Wrap each Add method to reparent elements to tbContent
+                -- Create proxy that swaps ItemContainer before each Add call
                 local Proxy = {}
-                for k, v in pairs(hiddenGroup) do
+                for k, v in pairs(baseGroup) do
                     if type(v) == "function" and type(k) == "string" and k:sub(1,3) == "Add" then
                         Proxy[k] = function(self, ...)
-                            local beforeChildren = {}
-                            -- Track existing children in hidden group
-                            local result = v(hiddenGroup, ...)
-                            -- Move any new GUI elements to tbContent
-                            -- Find the hidden ItemContainer
-                            for _, ch in ipairs(col:GetChildren()) do
-                                if ch:IsA("Frame") and not ch.Visible and ch.Size == UDim2.new(0,0,0,0) then
-                                    for _, inner in ipairs(ch:GetChildren()) do
-                                        if inner:IsA("Frame") and inner.BackgroundTransparency == 1 then
-                                            -- This is the ItemContainer
-                                            local toMove = {}
-                                            for _, el in ipairs(inner:GetChildren()) do
-                                                if not el:IsA("UIListLayout") and not el:IsA("UIPadding") and not el:IsA("UICorner") then
-                                                    table.insert(toMove, el)
-                                                end
+                            -- Swap the hidden group's ItemContainer upvalue to our content
+                            -- by temporarily reparenting - we use a direct approach
+                            local result = v(baseGroup, ...)
+                            -- Move newly created elements from hidden group to our tab content
+                            if hiddenFrame then
+                                for _, inner in ipairs(hiddenFrame:GetDescendants()) do
+                                    if inner:IsA("Frame") and inner.BackgroundTransparency == 1 then
+                                        local toMove = {}
+                                        for _, el in ipairs(inner:GetChildren()) do
+                                            if not el:IsA("UIListLayout") and not el:IsA("UIPadding") and not el:IsA("UICorner") then
+                                                table.insert(toMove, el)
                                             end
-                                            for _, el in ipairs(toMove) do
-                                                el.Parent = tbContent
-                                            end
-                                            break
                                         end
+                                        for _, el in ipairs(toMove) do
+                                            el.Parent = tbContent
+                                        end
+                                        if #toMove > 0 then break end
                                     end
-                                    break
                                 end
                             end
                             return result
                         end
                     elseif type(v) == "function" then
-                        Proxy[k] = function(self, ...) return v(hiddenGroup, ...) end
+                        Proxy[k] = function(self, ...) return v(baseGroup, ...) end
                     else
                         Proxy[k] = v
                     end
@@ -1731,6 +1728,7 @@ function HollowLib:CreateWindow(config)
 
         function Tab:AddLeftTabbox() return CreateTabBox(LeftCol) end
         function Tab:AddRightTabbox() return CreateTabBox(RightCol) end
+
 
 
         return Tab
