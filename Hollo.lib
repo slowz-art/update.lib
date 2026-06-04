@@ -333,7 +333,8 @@ function HollowLib:CreateWindow(config)
     PlayerName.Size = UDim2.new(1,-34,1,0)
     PlayerName.Position = UDim2.new(0,32,0,0)
     PlayerName.TextYAlignment = Enum.TextYAlignment.Center
-    PlayerName.ClipsDescendants = true
+    PlayerName.TextTruncate = Enum.TextTruncate.None
+    PlayerName.ClipsDescendants = false
 
     -- Tab content area
     local TabContent = MakeFrame(Content, UDim2.new(1,-sideExpanded,1,0), UDim2.new(0,sideExpanded,0,0), Theme.Background)
