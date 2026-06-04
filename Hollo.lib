@@ -1424,7 +1424,20 @@ function HollowLib:CreateWindow(config)
                     Group[methodName] = function(self, ...)
                         local ok, result = pcall(method, self, ...)
                         if ok then return result end
-                        warn("[HollowLib] " .. methodName .. " error: " .. tostring(result))
+                        -- Show error visually in the group
+                        pcall(function()
+                            local errLabel = Instance.new("TextLabel")
+                            errLabel.Text = methodName .. " ERR: " .. tostring(result):sub(1,60)
+                            errLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+                            errLabel.TextSize = 9
+                            errLabel.Font = Enum.Font.GothamMedium
+                            errLabel.BackgroundTransparency = 1
+                            errLabel.Size = UDim2.new(1, 0, 0, 14)
+                            errLabel.TextXAlignment = Enum.TextXAlignment.Left
+                            errLabel.TextWrapped = true
+                            errLabel.AutomaticSize = Enum.AutomaticSize.Y
+                            errLabel.Parent = ItemContainer
+                        end)
                         return SafeReturn
                     end
                 end
