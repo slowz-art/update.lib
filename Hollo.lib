@@ -1575,7 +1575,7 @@ function HollowLib:CreateWindow(config)
                 startSize = Main.AbsoluteSize
             end
         end)
-        UIS.InputChanged:Connect(function(input)
+        UserInputService.InputChanged:Connect(function(input)
             if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                 local delta = input.Position - startInput
                 local newW = math.max(minW, startSize.X + delta.X)
@@ -1584,7 +1584,7 @@ function HollowLib:CreateWindow(config)
                 Main.Size = UDim2.new(0, newW, 0, newH)
             end
         end)
-        UIS.InputEnded:Connect(function(input)
+        UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 resizing = false
             end
