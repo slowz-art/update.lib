@@ -773,6 +773,7 @@ function HollowLib:CreateWindow(config)
                 ToggleLabel.Position = UDim2.new(0,18,0,0)
                 ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
 
+                local onChangedFn = nil
                 local function SetState(newState, skipCb)
                     state = newState
                     if state then
@@ -786,8 +787,9 @@ function HollowLib:CreateWindow(config)
                         Tween(CheckFill, {BackgroundTransparency=1}, 0.15)
                         Tween(ToggleLabel, {TextColor3=Theme.TextDim}, 0.15)
                     end
-                    if not skipCb then callback(state) end
                     Toggle.Value = state
+                    if not skipCb then callback(state) end
+                    if not skipCb and onChangedFn then pcall(onChangedFn, state) end
                 end
 
                 SetState(state, true)
@@ -804,7 +806,7 @@ function HollowLib:CreateWindow(config)
                 Toggle.Value = state
                 function Toggle:AddColorPicker(pid, pcfg) return Group:AddColorPicker(pid, pcfg) end
                 function Toggle:AddKeyPicker(pid, pcfg) return Group:AddKeybindPicker(pid, pcfg) end
-                function Toggle:OnChanged(fn) callback = fn end
+                function Toggle:OnChanged(fn) onChangedFn = fn end
                 AddDependencySupport(Toggle, Row)
 
                 -- Fire dependency checks when toggle changes
@@ -857,6 +859,8 @@ function HollowLib:CreateWindow(config)
                 local SliderBtn = MakeButton(SliderBG, UDim2.new(1,0,1,10), UDim2.new(0,0,0,-5), Theme.Background)
                 SliderBtn.BackgroundTransparency = 1 SliderBtn.ZIndex = 4
 
+                local sliderOnChanged = nil
+
                 local function UpdateSlider(input)
                     local rel = math.clamp((input.Position.X - SliderBG.AbsolutePosition.X) / SliderBG.AbsoluteSize.X, 0, 1)
                     value = min + (max-min) * rel
@@ -867,6 +871,7 @@ function HollowLib:CreateWindow(config)
                     ValueLabel.Text = tostring(value) .. suffix .. "/" .. tostring(max) .. suffix
                     Slider.Value = value
                     callback(value)
+                    if sliderOnChanged then pcall(sliderOnChanged, value) end
                 end
 
                 SliderBtn.MouseButton1Down:Connect(function() dragging = true end)
@@ -886,10 +891,11 @@ function HollowLib:CreateWindow(config)
                     ValueLabel.Text = tostring(value) .. suffix .. "/" .. tostring(max) .. suffix
                     Slider.Value = value
                     callback(value)
+                    if sliderOnChanged then pcall(sliderOnChanged, value) end
                 end
                 function Slider:GetValue() return value end
                 Slider.Value = value
-                function Slider:OnChanged(fn) callback = fn end
+                function Slider:OnChanged(fn) sliderOnChanged = fn end
 
                 if id then
                     HollowLib.Flags[id] = Slider
@@ -1058,7 +1064,7 @@ function HollowLib:CreateWindow(config)
                                     SelectedLabel.Text = #result>0 and table.concat(result,", ") or "None"
                                     callback(result)
                                 else
-                                    selected = val SelectedLabel.Text = tostring(val) Dropdown.Value = val callback(val)
+                                    selected = val SelectedLabel.Text = tostring(val) Dropdown.Value = val callback(val) if dropOnChanged then pcall(dropOnChanged, val) end
                                     CloseDropdown()
                                 end
                                 BuildOptions(searchFilter)
@@ -1110,18 +1116,23 @@ function HollowLib:CreateWindow(config)
                 end)
 
                 function Dropdown:SetValues(v)
-                    if v then values = v end
+                    if v then
+                        values = v
+                    else
+                        values = Dropdown.Values or values
+                    end
                     Dropdown.Values = values
                     BuildOptions(searchFilter)
                 end
-                function Dropdown:SetValue(v) selected=v SelectedLabel.Text=tostring(v) Dropdown.Value=v callback(v) BuildOptions(searchFilter) RunDependencyChecks() end
+                function Dropdown:SetValue(v) selected=v SelectedLabel.Text=tostring(v) Dropdown.Value=v callback(v) if dropOnChanged then pcall(dropOnChanged, v) end BuildOptions(searchFilter) RunDependencyChecks() end
                 function Dropdown:GetValue()
                     if multi then local r={} for k,v in pairs(multiSelected) do if v then table.insert(r,k) end end return r end
                     return selected
                 end
+                local dropOnChanged = nil
                 Dropdown.Value = selected
                 Dropdown.Values = values
-                function Dropdown:OnChanged(fn) callback = fn end
+                function Dropdown:OnChanged(fn) dropOnChanged = fn end
 
                 if id then
                     HollowLib.Flags[id] = Dropdown
