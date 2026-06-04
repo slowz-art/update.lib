@@ -1407,6 +1407,9 @@ function HollowLib:CreateWindow(config)
                 return SearchBar
             end
 
+            -- Alias AddKeyPicker -> AddKeybindPicker for LinoriaLib compat
+            Group.AddKeyPicker = Group.AddKeybindPicker
+
             -- Wrap all Group:Add methods in pcall for resilience
             local SafeReturn = {Value = nil}
             function SafeReturn:SetValue() end
@@ -1424,20 +1427,6 @@ function HollowLib:CreateWindow(config)
                     Group[methodName] = function(self, ...)
                         local ok, result = pcall(method, self, ...)
                         if ok then return result end
-                        -- Show error visually in the group
-                        pcall(function()
-                            local errLabel = Instance.new("TextLabel")
-                            errLabel.Text = methodName .. " ERR: " .. tostring(result):sub(1,60)
-                            errLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-                            errLabel.TextSize = 9
-                            errLabel.Font = Enum.Font.GothamMedium
-                            errLabel.BackgroundTransparency = 1
-                            errLabel.Size = UDim2.new(1, 0, 0, 14)
-                            errLabel.TextXAlignment = Enum.TextXAlignment.Left
-                            errLabel.TextWrapped = true
-                            errLabel.AutomaticSize = Enum.AutomaticSize.Y
-                            errLabel.Parent = ItemContainer
-                        end)
                         return SafeReturn
                     end
                 end
@@ -1605,7 +1594,9 @@ end
 -- Usage: local Library = loadstring(...)() works the same way
 
 -- Global tables for LinoriaLib compat
--- Global tables already set up at top of file
+-- Force into all global scopes so the calling script can access them
+getgenv().Options = env.Options
+getgenv().Toggles = env.Toggles
 Options = env.Options
 Toggles = env.Toggles
 
