@@ -625,6 +625,9 @@ function HollowLib:CreateWindow(config)
                         for _, dep in ipairs(deps) do
                             local target = dep[1]
                             local required = dep[2]
+                            if type(target) == "string" then
+                                target = (env.Toggles and env.Toggles[target]) or (env.Options and env.Options[target])
+                            end
                             if target and target.Value ~= required then
                                 row.Visible = false
                                 return
@@ -658,6 +661,10 @@ function HollowLib:CreateWindow(config)
                         for _, dep in ipairs(deps) do
                             local target = dep[1]
                             local required = dep[2]
+                            -- Resolve string flag names to actual objects
+                            if type(target) == "string" then
+                                target = (env.Toggles and env.Toggles[target]) or (env.Options and env.Options[target])
+                            end
                             if target and target.Value ~= required then
                                 DepFrame.Visible = false
                                 return
