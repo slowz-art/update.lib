@@ -1510,12 +1510,13 @@ function HollowLib:CreateWindow(config)
             -- Outer TabBox frame
             local TBFrame = MakeFrame(col, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
             pcall(function() TBFrame.AutomaticSize = Enum.AutomaticSize.Y end)
+            TBFrame.BackgroundTransparency = 1
             TBFrame.ClipsDescendants = true
             MakeCorner(TBFrame, Radius.Group)
             MakeStroke(TBFrame, Theme.Border, 1)
 
             local TBHeader = MakeFrame(TBFrame, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
-            TBHeader.BackgroundTransparency = 0.5
+            TBHeader.BackgroundTransparency = 1
             local hl = Instance.new("UIListLayout")
             hl.FillDirection = Enum.FillDirection.Horizontal
             hl.Padding = UDim.new(0,0)
