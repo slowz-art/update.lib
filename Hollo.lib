@@ -786,7 +786,6 @@ function HollowLib:CreateWindow(config)
 
                 local onChangedFn = nil
 
-                Toggle:SetValue(state)
                 RowBtn.MouseButton1Click:Connect(function() Toggle:SetValue(not Toggle.Value) end)
                 RowBtn.MouseEnter:Connect(function()
                     if not Toggle.Value then Tween(CheckStroke, {Color=Theme.TextDisabled}, 0.1) end
@@ -824,6 +823,9 @@ function HollowLib:CreateWindow(config)
                     if onChangedFn then pcall(onChangedFn, v) end
                     RunDependencyChecks()
                 end
+
+                -- Initialize AFTER SetValue is defined
+                Toggle:SetValue(state)
                 function Toggle:GetValue() return state end
                 Toggle.Value = state
                 function Toggle:AddColorPicker(pid, pcfg) return Group:AddColorPicker(pid, pcfg) end
