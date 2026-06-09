@@ -5,39 +5,7 @@ local HollowLib = {}
 HollowLib.__index = HollowLib
 HollowLib.Flags = {}
 
--- Global keybind registry for SyncToggleState
-local _keybindRegistry = {}
-game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
-    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-    for _, kb in ipairs(_keybindRegistry) do
-        if not kb.isListening() and input.KeyCode == kb.getKey() and kb.getKey() ~= Enum.KeyCode.Unknown then
-            pcall(function()
-                -- Use direct parent reference (like LinoriaLib)
-                local parent = kb.parentToggle
-                if parent and parent.SetValue then
-                    if kb.mode == 'Toggle' then
-                        parent:SetValue(not parent.Value)
-                    elseif kb.mode == 'Hold' then
-                        parent:SetValue(true)
-                    end
-                end
-            end)
-        end
-    end
-end)
-game:GetService("UserInputService").InputEnded:Connect(function(input)
-    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-    for _, kb in ipairs(_keybindRegistry) do
-        if kb.mode == 'Hold' and input.KeyCode == kb.getKey() and kb.getKey() ~= Enum.KeyCode.Unknown then
-            pcall(function()
-                local parent = kb.parentToggle
-                if parent and parent.SetValue then
-                    parent:SetValue(false)
-                end
-            end)
-        end
-    end
-end)
+-- Keybind listeners are per-keybind (LinoriaLib pattern)
 
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -817,9 +785,25 @@ function HollowLib:CreateWindow(config)
                 ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
 
                 local onChangedFn = nil
-                local function SetState(newState, skipCb)
-                    state = newState
-                    if state then
+
+                Toggle:SetValue(state)
+                RowBtn.MouseButton1Click:Connect(function() Toggle:SetValue(not Toggle.Value) end)
+                RowBtn.MouseEnter:Connect(function()
+                    if not Toggle.Value then Tween(CheckStroke, {Color=Theme.TextDisabled}, 0.1) end
+                end)
+                RowBtn.MouseLeave:Connect(function()
+                    if not Toggle.Value then Tween(CheckStroke, {Color=Theme.Border}, 0.1) end
+                end)
+
+                Toggle.Addons = {}
+                Toggle.Type = 'Toggle'
+
+                function Toggle:SetValue(v)
+                    v = not not v
+                    state = v
+                    Toggle.Value = v
+                    -- Visual update
+                    if v then
                         Tween(CheckBox, {BackgroundColor3=Theme.Accent}, 0.15)
                         Tween(CheckStroke, {Color=Theme.Accent}, 0.15)
                         Tween(CheckFill, {BackgroundTransparency=0}, 0.15)
@@ -830,34 +814,28 @@ function HollowLib:CreateWindow(config)
                         Tween(CheckFill, {BackgroundTransparency=1}, 0.15)
                         Tween(ToggleLabel, {TextColor3=Theme.TextDim}, 0.15)
                     end
-                    Toggle.Value = state
-                    if not skipCb then callback(state) end
-                    if not skipCb and onChangedFn then pcall(onChangedFn, state) end
+                    -- Sync keybind addons (LinoriaLib pattern)
+                    for _, addon in ipairs(Toggle.Addons) do
+                        if addon.Type == 'KeyPicker' and addon.SyncToggleState then
+                            addon.Toggled = v
+                        end
+                    end
+                    pcall(callback, v)
+                    if onChangedFn then pcall(onChangedFn, v) end
+                    RunDependencyChecks()
                 end
-
-                SetState(state, true)
-                RowBtn.MouseButton1Click:Connect(function() SetState(not state) end)
-                RowBtn.MouseEnter:Connect(function()
-                    if not state then Tween(CheckStroke, {Color=Theme.TextDisabled}, 0.1) end
-                end)
-                RowBtn.MouseLeave:Connect(function()
-                    if not state then Tween(CheckStroke, {Color=Theme.Border}, 0.1) end
-                end)
-
-                function Toggle:SetValue(v) SetState(v, false) end
                 function Toggle:GetValue() return state end
                 Toggle.Value = state
                 function Toggle:AddColorPicker(pid, pcfg) return Group:AddColorPicker(pid, pcfg) end
-                function Toggle:AddKeyPicker(pid, pcfg) pcfg = pcfg or {} pcfg._parentToggle = Toggle return Group:AddKeybindPicker(pid, pcfg) end
+                function Toggle:AddKeyPicker(pid, pcfg)
+                    pcfg = pcfg or {}
+                    pcfg._parentObj = Toggle
+                    local result = Group:AddKeybindPicker(pid, pcfg)
+                    if result then table.insert(Toggle.Addons, result) end
+                    return result
+                end
                 function Toggle:OnChanged(fn) onChangedFn = fn end
                 AddDependencySupport(Toggle, Row)
-
-                -- Fire dependency checks when toggle changes
-                local origSetState = SetState
-                SetState = function(newState, skipCb)
-                    origSetState(newState, skipCb)
-                    RunDependencyChecks()
-                end
 
                 if id then
                     HollowLib.Flags[id] = Toggle
@@ -944,7 +922,7 @@ function HollowLib:CreateWindow(config)
                     HollowLib.Flags[id] = Slider
                     if env.Options then env.Options[id] = Slider end
                 end
-                AddDependencySupport(Slider, Row)
+                AddDependencySupport(Slider, Container)
                 return Slider
             end
 
@@ -1196,12 +1174,12 @@ function HollowLib:CreateWindow(config)
                 LabelText.RichText = richText or false LabelText.TextWrapped = true
 
                 -- Chaining support for LinoriaLib compat
-                function Label:AddKeyPicker(pid, pcfg) pcfg = pcfg or {} return Group:AddKeybindPicker(pid, pcfg) end
+                function Label:AddKeyPicker(pid, pcfg) pcfg = pcfg or {} pcfg._parentObj = Label return Group:AddKeybindPicker(pid, pcfg) end
                 function Label:AddColorPicker(pid, pcfg) return Group:AddColorPicker(pid, pcfg or {}) end
                 function Label:SetText(t) LabelText.Text = t end
                 Label.Text = LabelText
 
-                AddDependencySupport(Label, Row)
+                AddDependencySupport(Label, LabelFrame)
                 return Label
             end
 
@@ -1427,24 +1405,24 @@ function HollowLib:CreateWindow(config)
                 return ColorPicker
             end
 
-            -- ADD KEYBIND PICKER
+            -- ADD KEYBIND PICKER (LinoriaLib pattern)
             function Group:AddKeybindPicker(id, cfg)
                 cfg = cfg or {}
-                local KB = {}
-                -- Handle empty string, string key names, or nil defaults
-                local key = cfg.Default
-                if not key or key == '' or type(key) == 'string' then
-                    if type(key) == 'string' and key ~= '' then
-                        pcall(function() key = Enum.KeyCode[key] end)
-                    end
-                    if not key or type(key) ~= 'userdata' then
-                        key = Enum.KeyCode.Unknown
-                    end
+                local ParentObj = cfg._parentObj
+                local KeyPicker = {
+                    Value = cfg.Default or 'None',
+                    Toggled = false,
+                    Mode = cfg.Mode or 'Toggle',
+                    Type = 'KeyPicker',
+                    SyncToggleState = cfg.SyncToggleState or false,
+                    Callback = cfg.Callback or function() end,
+                }
+
+                if KeyPicker.SyncToggleState then
+                    KeyPicker.Mode = 'Toggle'
                 end
-                local callback = cfg.Callback or function() end
-                local listening = false
-                local syncToggle = cfg.SyncToggleState or false
-                local mode = cfg.Mode or 'Toggle'
+
+                local Picking = false
                 local noUI = cfg.NoUI or false
 
                 local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,26), nil, Theme.ItemBG)
@@ -1459,205 +1437,119 @@ function HollowLib:CreateWindow(config)
                 KBBtn.BackgroundTransparency = 1
                 MakeCorner(KBBtn, Radius.Small) MakeStroke(KBBtn, Theme.Border, 1)
 
-                local keyName = "None"
-                pcall(function() keyName = key.Name end)
-                local KBText = MakeLabel(KBBtn, keyName, 9, Theme.Accent, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
+                local KBText = MakeLabel(KBBtn, KeyPicker.Value, 9, Theme.Accent, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
                 KBText.Size = UDim2.new(1,0,1,0) KBText.TextYAlignment = Enum.TextYAlignment.Center
+
+                -- DoClick: LinoriaLib pattern - toggle parent directly
+                function KeyPicker:DoClick()
+                    if ParentObj and ParentObj.Type == 'Toggle' and KeyPicker.SyncToggleState then
+                        ParentObj:SetValue(not ParentObj.Value)
+                    end
+                    pcall(KeyPicker.Callback, KeyPicker.Toggled)
+                end
+
+                function KeyPicker:GetState()
+                    if KeyPicker.Mode == 'Always' then return true
+                    elseif KeyPicker.Mode == 'Hold' then
+                        if KeyPicker.Value == 'None' then return false end
+                        local k = KeyPicker.Value
+                        if k == 'MB1' or k == 'MB2' then
+                            return (k == 'MB1' and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1))
+                                or (k == 'MB2' and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2))
+                        else
+                            return pcall(function() return UserInputService:IsKeyDown(Enum.KeyCode[k]) end) and UserInputService:IsKeyDown(Enum.KeyCode[k])
+                        end
+                    else
+                        return KeyPicker.Toggled
+                    end
+                end
+
+                function KeyPicker:SetValue(data)
+                    if type(data) == 'table' then
+                        KeyPicker.Value = data[1] or 'None'
+                        KeyPicker.Mode = data[2] or 'Toggle'
+                    else
+                        KeyPicker.Value = tostring(data)
+                    end
+                    KBText.Text = KeyPicker.Value
+                end
+
+                function KeyPicker:OnChanged(fn) KeyPicker.Changed = fn end
 
                 -- Click to rebind
                 KBBtn.MouseButton1Click:Connect(function()
-                    if listening then return end
-                    listening = true KBText.Text = "..." KBText.TextColor3 = Theme.Text
+                    if Picking then return end
+                    Picking = true
+                    KBText.Text = "..." KBText.TextColor3 = Theme.Text
                     Tween(KBBtn, {BackgroundColor3=Theme.AccentDark}, 0.15)
-                    local conn
-                    conn = UserInputService.InputBegan:Connect(function(input, gpe)
-                        if input.KeyCode ~= Enum.KeyCode.Unknown then
-                            if input.KeyCode == Enum.KeyCode.Escape then
-                                KBText.Text = tostring(key.Name) KBText.TextColor3 = Theme.Accent
+
+                    task.delay(0.2, function()
+                        local Event
+                        Event = UserInputService.InputBegan:Connect(function(input)
+                            local Key
+                            if input.UserInputType == Enum.UserInputType.Keyboard then
+                                Key = input.KeyCode.Name
+                            elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+                                Key = 'MB1'
+                            elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+                                Key = 'MB2'
+                            end
+
+                            if Key then
+                                Picking = false
+                                KeyPicker.Value = Key
+                                KBText.Text = Key KBText.TextColor3 = Theme.Accent
                                 Tween(KBBtn, {BackgroundColor3=Theme.DropBG}, 0.15)
-                                listening = false conn:Disconnect() return
+
+                                if cfg.IsHideKey then
+                                    pcall(function() hideKey = Enum.KeyCode[Key] end)
+                                end
+
+                                pcall(KeyPicker.Callback, Key)
+                                if KeyPicker.Changed then pcall(KeyPicker.Changed, Key) end
+
+                                Event:Disconnect()
                             end
-                            key = input.KeyCode KBText.Text = tostring(key.Name) KBText.TextColor3 = Theme.Accent
-                            Tween(KBBtn, {BackgroundColor3=Theme.DropBG}, 0.15)
-                            listening = false callback(key)
-                            if cfg.IsHideKey then
-                                hideKey = key Window:Notify("Hide key: "..tostring(key.Name), 2)
-                            end
-                            KB.Value = key
-                            conn:Disconnect()
-                        end
+                        end)
                     end)
                 end)
 
-                KBBtn.MouseEnter:Connect(function() if not listening then Tween(KBBtn,{BackgroundColor3=Theme.GroupHeader},0.1) end end)
-                KBBtn.MouseLeave:Connect(function() if not listening then Tween(KBBtn,{BackgroundColor3=Theme.DropBG},0.1) end end)
+                KBBtn.MouseEnter:Connect(function() if not Picking then Tween(KBBtn,{BackgroundColor3=Theme.GroupHeader},0.1) end end)
+                KBBtn.MouseLeave:Connect(function() if not Picking then Tween(KBBtn,{BackgroundColor3=Theme.DropBG},0.1) end end)
 
-                -- Register in global keybind registry for SyncToggleState
-                if syncToggle and id then
-                    table.insert(_keybindRegistry, {
-                        id = id,
-                        parentToggle = cfg._parentToggle,
-                        getKey = function() return key end,
-                        isListening = function() return listening end,
-                        mode = mode,
-                    })
-                end
+                -- GLOBAL LISTENER: LinoriaLib exact pattern
+                -- Each keybind has its own InputBegan/InputEnded like LinoriaLib
+                UserInputService.InputBegan:Connect(function(input)
+                    if Picking then return end
 
-                function KB:SetValue(k) key=k KBText.Text=tostring(k.Name) if cfg.IsHideKey then hideKey=k end KB.Value=k end
-                function KB:GetValue() return key end
-
-                KB.Value = key
-                if id then
-                    HollowLib.Flags[id] = KB
-                    if env.Options then env.Options[id] = KB end
-                end
-                AddDependencySupport(KB, Row)
-                return KB
-            end
-
-            -- ADD TEXT INPUT
-            function Group:AddInput(id, cfg)
-                local Input = {}
-                local value = cfg.Default or ""
-                local callback = cfg.Callback or function() end
-                local placeholder = cfg.Placeholder or "Type here..."
-
-                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,26), nil, Theme.ItemBG)
-                Row.BackgroundTransparency = 1
-                MakePadding(Row, 0, 0, 4, 4)
-
-                local InputLabel = MakeLabel(Row, cfg.Text or id, 11, Theme.TextDim, Enum.Font.Gotham)
-                InputLabel.Size = UDim2.new(0.4,0,1,0) InputLabel.TextYAlignment = Enum.TextYAlignment.Center
-
-                local InputBox = Instance.new("TextBox")
-                InputBox.Size = UDim2.new(0.6,-2,0,16)
-                InputBox.Position = UDim2.new(0.4,2,0.5,-8)
-                InputBox.BackgroundColor3 = Theme.SliderBG
-                InputBox.BackgroundTransparency = 0.3
-                InputBox.BorderSizePixel = 0
-                InputBox.Text = value
-                InputBox.PlaceholderText = placeholder
-                InputBox.PlaceholderColor3 = Theme.TextDisabled
-                InputBox.TextColor3 = Theme.Text
-                InputBox.Font = Enum.Font.GothamMedium
-                InputBox.TextSize = 10
-                InputBox.ClearTextOnFocus = false
-                InputBox.Parent = Row
-                MakeCorner(InputBox, 4) MakeStroke(InputBox, Theme.Border, 1)
-
-                local finished = cfg.Finished
-                if finished == nil then finished = true end
-
-                InputBox.FocusLost:Connect(function(enter)
-                    value = InputBox.Text
-                    Input.Value = value
-                    callback(value, enter)
-                end)
-
-                -- Live text change - fires callback and OnChanged on every keystroke
-                InputBox:GetPropertyChangedSignal("Text"):Connect(function()
-                    value = InputBox.Text
-                    Input.Value = value
-                    if not finished then callback(value, false) end
-                    if Input._onChanged then Input._onChanged() end
-                end)
-
-                InputBox.Focused:Connect(function()
-                    Tween(InputBox, {BackgroundTransparency=0.1}, 0.15)
-                end)
-                InputBox.FocusLost:Connect(function()
-                    Tween(InputBox, {BackgroundTransparency=0.3}, 0.15)
-                end)
-
-                function Input:SetValue(v) value = v InputBox.Text = v Input.Value = v end
-                function Input:GetValue() return value end
-                function Input:OnChanged(fn) Input._onChanged = fn end
-
-                Input.Value = value
-                if id then
-                    HollowLib.Flags[id] = Input
-                    if env.Options then env.Options[id] = Input end
-                end
-                AddDependencySupport(Input, Row)
-                return Input
-            end
-
-            -- ADD SEARCH BAR (standalone search input with callback on each keystroke)
-            function Group:AddSearchBar(cfg)
-                local SearchBar = {}
-                local callback = cfg.Callback or function() end
-                local value = ""
-
-                local Row = MakeFrame(ItemContainer, UDim2.new(1,0,0,26), nil, Theme.ItemBG)
-                Row.BackgroundTransparency = 1
-                MakePadding(Row, 0, 0, 4, 4)
-
-                local SearchIcon = MakeLabel(Row, "?", 11, Theme.TextDisabled, Enum.Font.GothamBold)
-                SearchIcon.Size = UDim2.new(0,14,1,0)
-                SearchIcon.TextXAlignment = Enum.TextXAlignment.Center
-                SearchIcon.TextYAlignment = Enum.TextYAlignment.Center
-
-                local SearchInput = Instance.new("TextBox")
-                SearchInput.Size = UDim2.new(1,-18,0,16)
-                SearchInput.Position = UDim2.new(0,16,0.5,-8)
-                SearchInput.BackgroundColor3 = Theme.SliderBG
-                SearchInput.BackgroundTransparency = 0.3
-                SearchInput.BorderSizePixel = 0
-                SearchInput.Text = ""
-                SearchInput.PlaceholderText = cfg.Placeholder or "type to search..."
-                SearchInput.PlaceholderColor3 = Theme.TextDisabled
-                SearchInput.TextColor3 = Theme.Text
-                SearchInput.Font = Enum.Font.Gotham
-                SearchInput.TextSize = 10
-                SearchInput.ClearTextOnFocus = false
-                SearchInput.Parent = Row
-                MakeCorner(SearchInput, 4) MakeStroke(SearchInput, Theme.Border, 1)
-
-                SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
-                    value = SearchInput.Text
-                    callback(value)
-                end)
-
-                SearchInput.Focused:Connect(function()
-                    Tween(SearchInput, {BackgroundTransparency=0.1}, 0.15)
-                    Tween(SearchIcon, {TextColor3=Theme.Accent}, 0.15)
-                end)
-                SearchInput.FocusLost:Connect(function()
-                    Tween(SearchInput, {BackgroundTransparency=0.3}, 0.15)
-                    Tween(SearchIcon, {TextColor3=Theme.TextDisabled}, 0.15)
-                end)
-
-                function SearchBar:SetValue(v) value = v SearchInput.Text = v end
-                function SearchBar:GetValue() return value end
-                function SearchBar:Clear() value = "" SearchInput.Text = "" end
-
-                if cfg.Flag then HollowLib.Flags[cfg.Flag] = SearchBar if env.Options then env.Options[cfg.Flag] = SearchBar end end
-                return SearchBar
-            end
-
-            -- Alias AddKeyPicker -> AddKeybindPicker for LinoriaLib compat
-            Group.AddKeyPicker = Group.AddKeybindPicker
-
-            -- Wrap all Group:Add methods in pcall for resilience
-            local SafeReturn = {Value = nil}
-            function SafeReturn:SetValue() end
-            function SafeReturn:SetValues() end
-            function SafeReturn:GetValue() return nil end
-            function SafeReturn:OnChanged() end
-            function SafeReturn:AddColorPicker() return SafeReturn end
-            function SafeReturn:AddKeyPicker() return SafeReturn end
-            function SafeReturn:SetText() end
-
-            local rawGroup = {}
-            for k, v in pairs(Group) do rawGroup[k] = v end
-            for methodName, method in pairs(rawGroup) do
-                if type(method) == "function" and methodName:sub(1,3) == "Add" then
-                    Group[methodName] = function(self, ...)
-                        local ok, result = pcall(method, self, ...)
-                        if ok then return result end
-                        return SafeReturn
+                    if KeyPicker.Mode == 'Toggle' then
+                        local Key = KeyPicker.Value
+                        if Key == 'MB1' or Key == 'MB2' then
+                            if (Key == 'MB1' and input.UserInputType == Enum.UserInputType.MouseButton1)
+                            or (Key == 'MB2' and input.UserInputType == Enum.UserInputType.MouseButton2) then
+                                KeyPicker.Toggled = not KeyPicker.Toggled
+                                KeyPicker:DoClick()
+                            end
+                        elseif input.UserInputType == Enum.UserInputType.Keyboard then
+                            if input.KeyCode.Name == Key then
+                                KeyPicker.Toggled = not KeyPicker.Toggled
+                                KeyPicker:DoClick()
+                            end
+                        end
                     end
+                end)
+
+                UserInputService.InputEnded:Connect(function(input)
+                    if Picking then return end
+                    -- Hold mode handled by GetState polling
+                end)
+
+                if id then
+                    HollowLib.Flags[id] = KeyPicker
+                    if env.Options then env.Options[id] = KeyPicker end
                 end
+                AddDependencySupport(KeyPicker, Row)
+                return KeyPicker
             end
 
             Group._container = ItemContainer
@@ -1676,13 +1568,14 @@ function HollowLib:CreateWindow(config)
             -- Outer frame with border
             local TBFrame = MakeFrame(col, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
             pcall(function() TBFrame.AutomaticSize = Enum.AutomaticSize.Y end)
-            TBFrame.ClipsDescendants = true
+            TBFrame.BackgroundTransparency = 1
+            TBFrame.ClipsDescendants = false
             MakeCorner(TBFrame, Radius.Group)
             MakeStroke(TBFrame, Theme.Border, 1)
 
             -- Tab header
             local TBHeader = MakeFrame(TBFrame, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
-            TBHeader.BackgroundTransparency = 0.5 TBHeader.ZIndex = 2
+            TBHeader.BackgroundTransparency = 1 TBHeader.ZIndex = 2
             local hl = Instance.new("UIListLayout")
             hl.FillDirection = Enum.FillDirection.Horizontal
             hl.Padding = UDim.new(0,0) hl.Parent = TBHeader
