@@ -1,18 +1,41 @@
--- HollowLib | Made by hollowoodz
+-- =====================================================================
+-- HollowLib v2.0 | Made by hollowoodz (improved)
 -- Red & Dark Theme | Left Sidebar | Two Column Layout | Mobile Support
+-- =====================================================================
 
 local HollowLib = {}
 HollowLib.__index = HollowLib
 HollowLib.Flags = {}
 
--- Global keybind registry for SyncToggleState
+-- Global keybind registry with conflict detection
 local _keybindRegistry = {}
+local _usedKeys = {}
+
+local function RegisterKeybind(kb)
+    if kb.getKey() and kb.getKey() ~= Enum.KeyCode.Unknown then
+        _usedKeys[kb.getKey()] = (_usedKeys[kb.getKey()] or 0) + 1
+    end
+    _keybindRegistry[#_keybindRegistry+1] = kb
+end
+
+local function UnregisterKeybind(kb)
+    if kb.getKey() and kb.getKey() ~= Enum.KeyCode.Unknown then
+        _usedKeys[kb.getKey()] = math.max(0, (_usedKeys[kb.getKey()] or 0) - 1)
+    end
+    for i = #_keybindRegistry, 1, -1 do
+        if _keybindRegistry[i] == kb then table.remove(_keybindRegistry, i) break end
+    end
+end
+
+local function IsKeyUsed(key)
+    return (_usedKeys[key] or 0) > 0
+end
+
 game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
     for _, kb in ipairs(_keybindRegistry) do
         if not kb.isListening() and input.KeyCode == kb.getKey() and kb.getKey() ~= Enum.KeyCode.Unknown then
             pcall(function()
-                -- Use direct parent reference (like LinoriaLib)
                 local parent = kb.parentToggle
                 if parent and parent.SetValue then
                     if kb.mode == 'Toggle' then
@@ -47,7 +70,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 
--- Polyfills for executor compatibility
+-- Polyfills
 if not math.clamp then
     math.clamp = function(v, lo, hi) return math.min(math.max(v, lo), hi) end
 end
@@ -55,10 +78,9 @@ if not getgenv then
     getgenv = function() return _G end
 end
 
--- Global env for Options/Toggles (must be before CreateWindow)
 local env = getgenv()
 
--- Safe dummy object for accessing unregistered flags
+-- Safe dummy
 local SafeDummy = {}
 SafeDummy.Value = nil
 function SafeDummy:SetValue() end
@@ -69,6 +91,7 @@ function SafeDummy:OnChanged() end
 if not env.Options then env.Options = setmetatable({}, {__index = function() return SafeDummy end}) end
 if not env.Toggles then env.Toggles = setmetatable({}, {__index = function() return SafeDummy end}) end
 
+-- Theme (with accent support)
 local Theme = {
     Background  = Color3.fromRGB(10, 10, 12),
     Sidebar     = Color3.fromRGB(14, 14, 17),
@@ -95,7 +118,6 @@ local Theme = {
     Watermark   = Color3.fromRGB(14, 14, 17),
 }
 
--- ===== CORNER RADIUS PRESETS =====
 local Radius = {
     Window  = 14,
     Group   = 12,
@@ -145,21 +167,22 @@ local function MakeImage(p, id, s, pos)
     i.BackgroundTransparency = 1 i.Parent = p return i
 end
 
--- Dragging with lock
+-- Improved draggable with smooth follow
 local function MakeDraggable(bar, win, getLocked)
     local drag, di, ds, sp = false
     bar.InputBegan:Connect(function(i)
         if getLocked and getLocked() then return end
         if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
             drag = true ds = i.Position sp = win.Position
-            i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then drag = false end end)
         end
     end)
-    bar.InputChanged:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then di = i end
+    bar.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            drag = false
+        end
     end)
     UserInputService.InputChanged:Connect(function(i)
-        if i == di and drag then
+        if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
             local d = i.Position - ds
             win.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
         end
@@ -172,6 +195,57 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling ScreenGui.IgnoreGuiInset 
 pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
 if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer.PlayerGui end
 
+-- Improved notification system with stack
+local notifStack = {}
+local function PushNotification(title, desc, duration, icon)
+    duration = duration or 3
+    -- Shift existing
+    for _, nf in ipairs(notifStack) do
+        local cur = nf.Position
+        Tween(nf, {Position=UDim2.new(cur.X.Scale,cur.X.Offset,cur.Y.Scale,cur.Y.Offset-56)}, 0.35, Enum.EasingStyle.Quint)
+    end
+
+    local NF = MakeFrame(ScreenGui, UDim2.new(0,250,0,48), UDim2.new(1,12,1,-60), Theme.Background)
+    NF.BackgroundTransparency = 0.08
+    NF.ClipsDescendants = true
+    MakeCorner(NF, 10)
+    local NFStroke = MakeStroke(NF, Theme.Accent, 1)
+    NFStroke.Transparency = 0.6
+
+    local NBar = MakeFrame(NF, UDim2.new(0,3,1,-10), UDim2.new(0,6,0,5), Theme.Accent)
+    MakeCorner(NBar, 2)
+
+    local NTitle = MakeLabel(NF, title, 11, Theme.Text, Enum.Font.GothamBold)
+    NTitle.Size = UDim2.new(1,-24,0,14) NTitle.Position = UDim2.new(0,16,0,6)
+
+    local NDesc = MakeLabel(NF, desc, 9, Theme.TextDim, Enum.Font.Gotham)
+    NDesc.Size = UDim2.new(1,-24,0,13) NDesc.Position = UDim2.new(0,16,0,22)
+    NDesc.TextWrapped = true
+
+    local NProgress = MakeFrame(NF, UDim2.new(1,0,0,2), UDim2.new(0,0,1,-2), Theme.Accent)
+    NProgress.BackgroundTransparency = 0.5
+    MakeCorner(NProgress, 1)
+
+    table.insert(notifStack, 1, NF)
+
+    Tween(NF, {Position=UDim2.new(1,-262,1,-60)}, 0.4, Enum.EasingStyle.Quint)
+
+    task.delay(0.45, function()
+        Tween(NProgress, {Size=UDim2.new(0,0,0,2)}, duration - 0.5, Enum.EasingStyle.Linear)
+    end)
+
+    task.delay(duration, function()
+        Tween(NF, {Position=UDim2.new(1,12,1,-60)}, 0.35, Enum.EasingStyle.Quint)
+        Tween(NFStroke, {Transparency=1}, 0.3)
+        task.wait(0.4)
+        for i, v in ipairs(notifStack) do if v == NF then table.remove(notifStack, i) break end end
+        NF:Destroy()
+    end)
+
+    return NF
+end
+
+-- ===== MAIN WINDOW CONSTRUCTOR =====
 function HollowLib:CreateWindow(config)
     local Window = {}
     local Tabs = {}
@@ -182,7 +256,7 @@ function HollowLib:CreateWindow(config)
     local curW, curH = 580, 400
     local minW, minH = 380, 280
 
-    -- Custom accent color
+    -- Apply accent
     if config.Accent then
         Theme.Accent = config.Accent
         Theme.AccentDark = Color3.fromRGB(
@@ -195,13 +269,13 @@ function HollowLib:CreateWindow(config)
         Theme.TabActive = config.Accent
     end
 
-    -- Main Frame
+    -- Main frame with background image
     local Main = MakeFrame(ScreenGui, UDim2.new(0,curW,0,curH), UDim2.new(0.5,-curW/2,0.5,-curH/2), Theme.Background)
     Main.Name = "HollowWindow" Main.ClipsDescendants = true
     Main.BackgroundTransparency = 0.15
     MakeCorner(Main, Radius.Window) MakeStroke(Main, Theme.Border, 1)
 
-    -- Custom background image (covers entire UI, semi-transparent)
+    -- Background image
     local BGImage = Instance.new("ImageLabel")
     BGImage.Name = "BackgroundImage"
     BGImage.Size = UDim2.new(1,0,1,0)
@@ -219,14 +293,13 @@ function HollowLib:CreateWindow(config)
         BGImage.Image = bgId
     end
 
-    -- Shadow (outside clip)
+    -- Shadow
     local ShadowHolder = Instance.new("Frame")
     ShadowHolder.Size = UDim2.new(1,0,1,0)
     ShadowHolder.BackgroundTransparency = 1
     ShadowHolder.ClipsDescendants = false
     ShadowHolder.Parent = Main
 
-    -- Shadow
     local Shadow = Instance.new("ImageLabel")
     Shadow.Image = "rbxassetid://6014261993" Shadow.ImageColor3 = Color3.new(0,0,0)
     Shadow.ImageTransparency = 0.5 Shadow.Size = UDim2.new(1,40,1,40)
@@ -242,7 +315,6 @@ function HollowLib:CreateWindow(config)
     Topbar.BorderSizePixel = 0
     Topbar.Parent = Main
     MakeCorner(Topbar, Radius.Window)
-    -- Bottom fill to square off bottom corners
     local TopbarFill = Instance.new("Frame")
     TopbarFill.Size = UDim2.new(1,0,0.5,0)
     TopbarFill.Position = UDim2.new(0,0,0.5,0)
@@ -268,9 +340,9 @@ function HollowLib:CreateWindow(config)
     TitleLabel.Size = UDim2.new(1, isMobile and -140 or -100, 1, 0)
     TitleLabel.Position = UDim2.new(0, 54, 0, 0) TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-    -- Topbar buttons helper
+    -- Topbar buttons (minimize, etc.)
     local topBtnOffset = -30
-    local function makeTopBtn(sym, color)
+    local function makeTopBtn(sym, color, cb)
         local b = MakeButton(Topbar, UDim2.new(0,26,0,26), UDim2.new(1,topBtnOffset,0.5,-13), Theme.Sidebar)
         b.BackgroundTransparency = 1
         MakeCorner(b, Radius.Small)
@@ -278,45 +350,73 @@ function HollowLib:CreateWindow(config)
         l.Size = UDim2.new(1,0,1,0) l.TextYAlignment = Enum.TextYAlignment.Center
         b.MouseEnter:Connect(function() Tween(b, {BackgroundColor3=Theme.GroupBG}, 0.15) end)
         b.MouseLeave:Connect(function() Tween(b, {BackgroundColor3=Theme.Sidebar}, 0.15) end)
+        b.MouseButton1Click:Connect(cb)
         topBtnOffset = topBtnOffset - 32
         return b, l
     end
 
-    -- (X button removed - use hide key or Unload)
+    -- Min/Max button (to minimize to watermark)
+    local minimized = false
+    local minBtn, minLabel = makeTopBtn("─", Theme.TextDim, function()
+        minimized = not minimized
+        if minimized then
+            Main.Size = UDim2.new(0, curW, 0, 34)
+            Main.Position = UDim2.new(0.5, -curW/2, 0.5, -17)
+            Content.Visible = false
+            ResizeHandle.Visible = false
+            minLabel.Text = "□"
+        else
+            Main.Size = UDim2.new(0, curW, 0, curH)
+            Main.Position = UDim2.new(0.5, -curW/2, 0.5, -curH/2)
+            Content.Visible = true
+            ResizeHandle.Visible = true
+            minLabel.Text = "─"
+        end
+    end)
 
-    -- Mobile only: floating draggable buttons on the left
+    -- (X button removed, use hide key or Unload)
+
+    -- Mobile floating controls (auto-hide)
+    local floatGroup = Instance.new("Frame")
+    floatGroup.Size = UDim2.new(0,0,0,0) floatGroup.BackgroundTransparency = 1 floatGroup.Parent = ScreenGui
+
     if isMobile then
-        -- Toggle UI button
-        local TogFloat = MakeButton(ScreenGui, UDim2.new(0,70,0,26), UDim2.new(0,12,0.22,0), Theme.Watermark)
-        TogFloat.BackgroundTransparency = 0.3
-        MakeCorner(TogFloat, 8) MakeStroke(TogFloat, Theme.Border, 1)
+        local TogFloat = MakeButton(floatGroup, UDim2.new(0,70,0,26), UDim2.new(0,12,0.22,0), Theme.Watermark)
+        TogFloat.BackgroundTransparency = 0.3 MakeCorner(TogFloat, 8) MakeStroke(TogFloat, Theme.Border, 1)
         local TogFloatL = MakeLabel(TogFloat, "Toggle UI", 9, Theme.TextDim, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
         TogFloatL.Size = UDim2.new(1,0,1,0) TogFloatL.TextYAlignment = Enum.TextYAlignment.Center
         MakeDraggable(TogFloat, TogFloat)
-
         TogFloat.MouseButton1Click:Connect(function()
             uiVisible = not uiVisible
             Main.Visible = uiVisible
         end)
 
-        -- Lock UI button
-        local LockFloat = MakeButton(ScreenGui, UDim2.new(0,62,0,26), UDim2.new(0,12,0.22,30), Theme.Watermark)
-        LockFloat.BackgroundTransparency = 0.3
-        MakeCorner(LockFloat, 8) MakeStroke(LockFloat, Theme.Border, 1)
+        local LockFloat = MakeButton(floatGroup, UDim2.new(0,62,0,26), UDim2.new(0,12,0.22,30), Theme.Watermark)
+        LockFloat.BackgroundTransparency = 0.3 MakeCorner(LockFloat, 8) MakeStroke(LockFloat, Theme.Border, 1)
         local LockFloatL = MakeLabel(LockFloat, "Lock UI", 9, Theme.TextDim, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
         LockFloatL.Size = UDim2.new(1,0,1,0) LockFloatL.TextYAlignment = Enum.TextYAlignment.Center
         MakeDraggable(LockFloat, LockFloat)
-
         LockFloat.MouseButton1Click:Connect(function()
             uiLocked = not uiLocked
             LockFloatL.Text = uiLocked and "Locked" or "Lock UI"
         end)
+
+        -- Auto-hide after 3s
+        local hideFloatTimer
+        local function resetFloatTimer()
+            floatGroup.Visible = true
+            if hideFloatTimer then task.cancel(hideFloatTimer) end
+            hideFloatTimer = task.delay(4, function()
+                floatGroup.Visible = false
+            end)
+        end
+        floatGroup.Visible = true
+        resetFloatTimer()
+        UserInputService.TouchBegan:Connect(resetFloatTimer)
+        UserInputService.MouseButton1Down:Connect(resetFloatTimer)
     end
 
     MakeDraggable(Topbar, Main, function() return uiLocked end)
-
-    -- Hide/show keybind (desktop) - set up after Watermark is created
-    local hideConnection
 
     -- Content
     local Content = MakeFrame(Main, UDim2.new(1,0,1,-34), UDim2.new(0,0,0,34), Theme.Background)
@@ -345,13 +445,12 @@ function HollowLib:CreateWindow(config)
     TabList.ClipsDescendants = true
     MakeList(TabList, 5) MakePadding(TabList, 4, 6, 10, 10)
 
-    -- Display name at bottom of sidebar
+    -- Player info at bottom
     local PlayerInfo = MakeFrame(Sidebar, UDim2.new(1,0,0,44), UDim2.new(0,0,1,-44), Theme.Sidebar)
     PlayerInfo.BackgroundTransparency = 1
     MakeStroke(PlayerInfo, Theme.Border, 1)
     MakePadding(PlayerInfo, 6, 6, 10, 10)
 
-    -- Avatar (rbxthumb works without HTTP requests)
     local PlayerAvatar = Instance.new("ImageLabel")
     PlayerAvatar.Size = UDim2.new(0,26,0,26)
     PlayerAvatar.Position = UDim2.new(0,0,0.5,-13)
@@ -362,7 +461,6 @@ function HollowLib:CreateWindow(config)
     PlayerAvatar.Parent = PlayerInfo
     MakeCorner(PlayerAvatar, 13)
 
-    -- Name (fixed width, clipped)
     local PlayerName = MakeLabel(PlayerInfo, config.DisplayName or LocalPlayer.DisplayName, 11, Theme.Text, Enum.Font.GothamMedium)
     PlayerName.Size = UDim2.new(1,-34,1,0)
     PlayerName.Position = UDim2.new(0,32,0,0)
@@ -375,7 +473,7 @@ function HollowLib:CreateWindow(config)
     TabContent.BackgroundTransparency = 1
     TabContent.ClipsDescendants = true
 
-    -- Sidebar collapse/expand (desktop only)
+    -- Collapse/Expand sidebar (desktop)
     local allTabLabels = {}
     if not isMobile then
         local function CollapseSidebar()
@@ -387,7 +485,6 @@ function HollowLib:CreateWindow(config)
             Tween(PlayerName, {TextTransparency=1}, 0.15)
             for _, lbl in ipairs(allTabLabels) do Tween(lbl, {TextTransparency=1}, 0.15) end
         end
-
         local function ExpandSidebar()
             if sideOpen then return end
             sideOpen = true
@@ -397,11 +494,7 @@ function HollowLib:CreateWindow(config)
             Tween(PlayerName, {TextTransparency=0}, 0.2)
             for _, lbl in ipairs(allTabLabels) do Tween(lbl, {TextTransparency=0}, 0.2) end
         end
-
-        -- Expand on sidebar click/hover
         Sidebar.MouseEnter:Connect(ExpandSidebar)
-
-        -- Collapse when clicking in the content area
         TabContent.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 CollapseSidebar()
@@ -409,38 +502,32 @@ function HollowLib:CreateWindow(config)
         end)
     end
 
-    -- ===== WATERMARK =====
+    -- Watermark (draggable, shows FPS & ping)
     local wmName = config.WatermarkName or "hollowoodz"
     local Watermark = MakeFrame(ScreenGui, UDim2.new(0, isMobile and 220 or 240, 0, 28), UDim2.new(0,12,1,-40), Theme.Watermark)
     Watermark.BackgroundTransparency = 0.3
-    MakeCorner(Watermark, 10) 
+    MakeCorner(Watermark, 10)
     local WMStroke = MakeStroke(Watermark, Theme.Border, 1)
     MakeDraggable(Watermark, Watermark)
 
-    -- Left accent bar
     local WMBar = MakeFrame(Watermark, UDim2.new(0,3,0,16), UDim2.new(0,6,0.5,-8), Theme.Accent)
     MakeCorner(WMBar, 2)
 
-    -- Name label
     local WMName = MakeLabel(Watermark, wmName, 10, Theme.Text, Enum.Font.GothamBold)
     WMName.Size = UDim2.new(0,72,1,0) WMName.Position = UDim2.new(0,14,0,0)
     WMName.TextYAlignment = Enum.TextYAlignment.Center
     pcall(function() WMName.AutomaticSize = Enum.AutomaticSize.X end)
 
-    -- Separator dot
     local WMDot1 = MakeFrame(Watermark, UDim2.new(0,3,0,3), UDim2.new(0,88,0.5,-1), Theme.TextDisabled)
     MakeCorner(WMDot1, 2)
 
-    -- FPS label
     local WMFps = MakeLabel(Watermark, "60fps", 10, Theme.Accent, Enum.Font.GothamMedium)
     WMFps.Size = UDim2.new(0,40,1,0) WMFps.Position = UDim2.new(0,96,0,0)
     WMFps.TextYAlignment = Enum.TextYAlignment.Center WMFps.TextXAlignment = Enum.TextXAlignment.Center
 
-    -- Separator dot
     local WMDot2 = MakeFrame(Watermark, UDim2.new(0,3,0,3), UDim2.new(0,138,0.5,-1), Theme.TextDisabled)
     MakeCorner(WMDot2, 2)
 
-    -- Ping label
     local WMPing = MakeLabel(Watermark, "0ms", 10, Theme.TextDim, Enum.Font.GothamMedium)
     WMPing.Size = UDim2.new(0,40,1,0) WMPing.Position = UDim2.new(0,146,0,0)
     WMPing.TextYAlignment = Enum.TextYAlignment.Center WMPing.TextXAlignment = Enum.TextXAlignment.Center
@@ -456,14 +543,13 @@ function HollowLib:CreateWindow(config)
         end)
         WMFps.Text = math.floor(fps).."fps"
         WMPing.Text = ping.."ms"
-        -- Color code fps
         if fps >= 50 then WMFps.TextColor3 = Theme.Accent
         elseif fps >= 30 then WMFps.TextColor3 = Color3.fromRGB(220, 180, 30)
         else WMFps.TextColor3 = Color3.fromRGB(220, 50, 50) end
     end)
 
-    -- Hide/show keybind (now that Watermark exists)
-    hideConnection = UserInputService.InputBegan:Connect(function(input, gpe)
+    -- Hide/show keybind
+    UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe then return end
         if input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == hideKey then
             uiVisible = not uiVisible
@@ -476,9 +562,46 @@ function HollowLib:CreateWindow(config)
     Main.Size = UDim2.new(0,curW,0,0) Main.Position = UDim2.new(0.5,-curW/2,0.5,0)
     Tween(Main, {Size=UDim2.new(0,curW,0,curH),Position=UDim2.new(0.5,-curW/2,0.5,-curH/2)}, 0.4, Enum.EasingStyle.Quint)
 
-    -- ==================
-    -- ADD TAB
-    -- ==================
+    -- Resize handle
+    local ResizeHandle = Instance.new("TextButton")
+    ResizeHandle.Size = UDim2.new(0,16,0,16)
+    ResizeHandle.Position = UDim2.new(1,-16,1,-16)
+    ResizeHandle.BackgroundTransparency = 1
+    ResizeHandle.Text = ""
+    ResizeHandle.ZIndex = 10
+    ResizeHandle.Parent = Main
+
+    local ResizeDots = MakeLabel(ResizeHandle, "...", 10, Theme.TextDisabled, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
+    ResizeDots.Size = UDim2.new(1,0,1,0) ResizeDots.TextYAlignment = Enum.TextYAlignment.Bottom
+    ResizeDots.Rotation = -45
+
+    do
+        local resizing = false
+        local startInput, startSize
+        ResizeHandle.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                resizing = true
+                startInput = input.Position
+                startSize = Main.AbsoluteSize
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - startInput
+                local newW = math.max(minW, startSize.X + delta.X)
+                local newH = math.max(minH, startSize.Y + delta.Y)
+                curW = newW curH = newH
+                Main.Size = UDim2.new(0, newW, 0, newH)
+            end
+        end)
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                resizing = false
+            end
+        end)
+    end
+
+    -- ===== Tab Functions =====
     function Window:AddTab(name, icon)
         local Tab = {}
         local isActive = false
@@ -491,7 +614,6 @@ function HollowLib:CreateWindow(config)
         local TabIndicator = MakeFrame(TabBtn, UDim2.new(0,3,0,10), UDim2.new(0,0,0.5,-5), Theme.Accent)
         TabIndicator.BackgroundTransparency = 1 MakeCorner(TabIndicator, 2)
 
-        -- Icon: ImageLabel if texture ID, TextLabel otherwise
         local TabIcon
         if hasImageIcon then
             TabIcon = Instance.new("ImageLabel")
@@ -512,15 +634,9 @@ function HollowLib:CreateWindow(config)
         TabLabel.Size = UDim2.new(1,-32,1,0) TabLabel.Position = UDim2.new(0,26,0,0)
         table.insert(allTabLabels, TabLabel)
 
-        -- Tab page with TWO COLUMN layout (CanvasGroup for smooth fade, fallback to Frame)
-        local TabPage
-        local useCanvasGroup = pcall(function()
-            TabPage = Instance.new("CanvasGroup")
-            TabPage.GroupTransparency = 0
-        end)
-        if not useCanvasGroup then
-            TabPage = Instance.new("Frame")
-        end
+        -- Tab page with CanvasGroup for smooth fade
+        local TabPage = Instance.new("CanvasGroup")
+        TabPage.GroupTransparency = 0
         TabPage.Size = UDim2.new(1,0,1,0)
         TabPage.Position = UDim2.new(0,0,0,0)
         TabPage.BackgroundTransparency = 1
@@ -534,19 +650,17 @@ function HollowLib:CreateWindow(config)
         TabScroll.BackgroundTransparency = 1 TabScroll.BorderSizePixel = 0
         TabScroll.ScrollBarThickness = 3 TabScroll.ScrollBarImageColor3 = Theme.ScrollBar
         TabScroll.CanvasSize = UDim2.new(0,0,0,9999)
-        pcall(function() pcall(function() TabScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y end) end)
+        pcall(function() TabScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y end)
         TabScroll.Parent = TabPage
 
-        -- Inner wrapper for spacing (no UIPadding - use real frame offsets)
         local InnerWrap = Instance.new("Frame")
-        InnerWrap.Size = UDim2.new(1,-20,0,0) -- 8 left + 12 right = 20
-        InnerWrap.Position = UDim2.new(0,8,0,10) -- 8px from left, 10px from top
+        InnerWrap.Size = UDim2.new(1,-20,0,0)
+        InnerWrap.Position = UDim2.new(0,8,0,10)
         InnerWrap.BackgroundTransparency = 1
         InnerWrap.BorderSizePixel = 0
         pcall(function() InnerWrap.AutomaticSize = Enum.AutomaticSize.Y end)
         InnerWrap.Parent = TabScroll
 
-        -- Two column container
         local ColHolder = MakeFrame(InnerWrap, UDim2.new(1,0,0,0), nil, Theme.Background, 1)
         pcall(function() ColHolder.AutomaticSize = Enum.AutomaticSize.Y end)
 
@@ -565,7 +679,6 @@ function HollowLib:CreateWindow(config)
         pcall(function() RightCol.AutomaticSize = Enum.AutomaticSize.Y end)
         MakeList(RightCol, 8)
 
-        -- Bottom spacer so scroll canvas has room at the end
         local BottomSpacer = Instance.new("Frame")
         BottomSpacer.Size = UDim2.new(1,0,0,16)
         BottomSpacer.Position = UDim2.new(0,0,0,0)
@@ -584,10 +697,8 @@ function HollowLib:CreateWindow(config)
             if ActiveTab and ActiveTab ~= Tab then ActiveTab:_deactivate() end
             isActive = true ActiveTab = Tab
             TabPage.Visible = true
-            if useCanvasGroup then
-                TabPage.GroupTransparency = 1
-                Tween(TabPage, {GroupTransparency=0}, 0.2, Enum.EasingStyle.Quint)
-            end
+            TabPage.GroupTransparency = 1
+            Tween(TabPage, {GroupTransparency=0}, 0.25, Enum.EasingStyle.Quint)
             TabScroll.CanvasPosition = Vector2.new(0, 0)
             Tween(TabBtn, {BackgroundColor3=Theme.TabHover}, 0.2, Enum.EasingStyle.Quint)
             Tween(TabLabel, {TextColor3=Theme.Text}, 0.2, Enum.EasingStyle.Quint)
@@ -601,12 +712,8 @@ function HollowLib:CreateWindow(config)
             Tween(TabLabel, {TextColor3=Theme.TextDim}, 0.2, Enum.EasingStyle.Quint)
             Tween(TabIcon, {[iconColorProp]=Theme.TextDim}, 0.2, Enum.EasingStyle.Quint)
             Tween(TabIndicator, {BackgroundTransparency=1, Size=UDim2.new(0,3,0,10)}, 0.2, Enum.EasingStyle.Quint)
-            if useCanvasGroup then
-                Tween(TabPage, {GroupTransparency=1}, 0.15, Enum.EasingStyle.Quint)
-                task.delay(0.15, function() if not isActive then TabPage.Visible = false end end)
-            else
-                TabPage.Visible = false
-            end
+            Tween(TabPage, {GroupTransparency=1}, 0.15, Enum.EasingStyle.Quint)
+            task.delay(0.15, function() if not isActive then TabPage.Visible = false end end)
         end
 
         TabBtn.MouseEnter:Connect(function()
@@ -619,16 +726,13 @@ function HollowLib:CreateWindow(config)
         if #Tabs == 0 then Activate() end
         table.insert(Tabs, Tab)
 
-        -- ==================
-        -- ADD GROUPBOX
-        -- ==================
+        -- ===== Groupbox Internal =====
         local function AddGroupInternal(name, col, existingContainer)
             local Group = {}
 
             local GroupFrame, ItemContainer
 
             if existingContainer then
-                -- Use existing container directly (for TabBox tabs)
                 GroupFrame = existingContainer
                 ItemContainer = existingContainer
             else
@@ -658,137 +762,38 @@ function HollowLib:CreateWindow(config)
                 MakeList(ItemContainer, 6)
             end
 
-            -- Dependency system: show/hide elements based on other element values
-            local dependencyChecks = {}
+            -- Dependency system (improved with multiple conditions)
+            local dependencyList = {}
+            local function RunDependencyChecks()
+                for _, row in ipairs(dependencyList) do
+                    local visible = true
+                    for _, dep in ipairs(row._deps) do
+                        local target = dep[1]
+                        local required = dep[2]
+                        if type(target) == "string" then
+                            target = (env.Toggles and env.Toggles[target]) or (env.Options and env.Options[target])
+                        end
+                        if target and target.Value ~= required then
+                            visible = false
+                            break
+                        end
+                    end
+                    row.Visible = visible
+                end
+            end
+
             local function AddDependencySupport(element, row)
+                row._deps = {}
                 element._row = row
                 function element:SetupDependencies(deps)
                     if not deps or #deps == 0 then return end
-                    local function CheckDeps()
-                        for _, dep in ipairs(deps) do
-                            local target = dep[1]
-                            local required = dep[2]
-                            if type(target) == "string" then
-                                target = (env.Toggles and env.Toggles[target]) or (env.Options and env.Options[target])
-                            end
-                            if target and target.Value ~= required then
-                                row.Visible = false
-                                return
-                            end
-                        end
-                        row.Visible = true
-                    end
-                    table.insert(dependencyChecks, CheckDeps)
-                    CheckDeps()
+                    row._deps = deps
+                    table.insert(dependencyList, row)
+                    RunDependencyChecks()
                 end
             end
 
-            -- Run all dependency checks when any value changes
-            local function RunDependencyChecks()
-                for _, check in ipairs(dependencyChecks) do
-                    pcall(check)
-                end
-            end
-
-            -- ADD DEPENDENCY BOX - container that shows/hides based on dependencies
-            function Group:AddDependencyBox()
-                local DepBox = {}
-                local DepFrame = MakeFrame(ItemContainer, UDim2.new(1,0,0,0), nil, Theme.ItemBG)
-                DepFrame.BackgroundTransparency = 1
-                pcall(function() DepFrame.AutomaticSize = Enum.AutomaticSize.Y end)
-                MakeList(DepFrame, 6)
-
-                function DepBox:SetupDependencies(deps)
-                    if not deps or #deps == 0 then return end
-                    local function CheckDeps()
-                        for _, dep in ipairs(deps) do
-                            local target = dep[1]
-                            local required = dep[2]
-                            -- Resolve string flag names to actual objects
-                            if type(target) == "string" then
-                                target = (env.Toggles and env.Toggles[target]) or (env.Options and env.Options[target])
-                            end
-                            if target and target.Value ~= required then
-                                DepFrame.Visible = false
-                                return
-                            end
-                        end
-                        DepFrame.Visible = true
-                    end
-                    table.insert(dependencyChecks, CheckDeps)
-                    CheckDeps()
-                end
-
-                -- Clone all Add methods from Group but parent to DepFrame instead
-                -- We do this by creating a proxy that redirects ItemContainer
-                local origContainer = ItemContainer
-
-                function DepBox:AddToggle(id, cfg)
-                    ItemContainer = DepFrame
-                    local result = Group:AddToggle(id, cfg)
-                    ItemContainer = origContainer
-                    return result
-                end
-                function DepBox:AddSlider(id, cfg)
-                    ItemContainer = DepFrame
-                    local result = Group:AddSlider(id, cfg)
-                    ItemContainer = origContainer
-                    return result
-                end
-                function DepBox:AddButton(a, b)
-                    ItemContainer = DepFrame
-                    local result = Group:AddButton(a, b)
-                    ItemContainer = origContainer
-                    return result
-                end
-                function DepBox:AddDropdown(id, cfg)
-                    ItemContainer = DepFrame
-                    local result = Group:AddDropdown(id, cfg)
-                    ItemContainer = origContainer
-                    return result
-                end
-                function DepBox:AddInput(id, cfg)
-                    ItemContainer = DepFrame
-                    local result = Group:AddInput(id, cfg)
-                    ItemContainer = origContainer
-                    return result
-                end
-                function DepBox:AddLabel(text)
-                    ItemContainer = DepFrame
-                    local result = Group:AddLabel(text)
-                    ItemContainer = origContainer
-                    return result
-                end
-                function DepBox:AddColorPicker(id, cfg)
-                    ItemContainer = DepFrame
-                    local result = Group:AddColorPicker(id, cfg)
-                    ItemContainer = origContainer
-                    return result
-                end
-                function DepBox:AddKeybindPicker(id, cfg)
-                    ItemContainer = DepFrame
-                    local result = Group:AddKeybindPicker(id, cfg)
-                    ItemContainer = origContainer
-                    return result
-                end
-                DepBox.AddKeyPicker = DepBox.AddKeybindPicker
-                function DepBox:AddDivider()
-                    ItemContainer = DepFrame
-                    local result = Group:AddDivider()
-                    ItemContainer = origContainer
-                    return result
-                end
-                function DepBox:AddSearchBar(cfg)
-                    ItemContainer = DepFrame
-                    local result = Group:AddSearchBar(cfg)
-                    ItemContainer = origContainer
-                    return result
-                end
-
-                return DepBox
-            end
-
-            -- ADD TOGGLE (Clean checkbox style)
+            -- ===== COMPONENTS =====
             function Group:AddToggle(id, cfg)
                 local Toggle = {}
                 local state = cfg.Default or false
@@ -801,12 +806,10 @@ function HollowLib:CreateWindow(config)
                 local RowBtn = MakeButton(Row, UDim2.new(1,0,1,0), nil, Theme.ItemBG)
                 RowBtn.BackgroundTransparency = 1
 
-                -- Checkbox box
                 local CheckBox = MakeFrame(Row, UDim2.new(0,13,0,13), UDim2.new(0,0,0.5,-6), Theme.Toggle)
                 MakeCorner(CheckBox, 3)
                 local CheckStroke = MakeStroke(CheckBox, Theme.Border, 1)
 
-                -- Inner fill (visible when on)
                 local CheckFill = MakeFrame(CheckBox, UDim2.new(0,7,0,7), UDim2.new(0.5,-3,0.5,-3), Theme.Accent)
                 MakeCorner(CheckFill, 2)
                 CheckFill.BackgroundTransparency = 1
@@ -833,6 +836,7 @@ function HollowLib:CreateWindow(config)
                     Toggle.Value = state
                     if not skipCb then callback(state) end
                     if not skipCb and onChangedFn then pcall(onChangedFn, state) end
+                    RunDependencyChecks()
                 end
 
                 SetState(state, true)
@@ -852,13 +856,6 @@ function HollowLib:CreateWindow(config)
                 function Toggle:OnChanged(fn) onChangedFn = fn end
                 AddDependencySupport(Toggle, Row)
 
-                -- Fire dependency checks when toggle changes
-                local origSetState = SetState
-                SetState = function(newState, skipCb)
-                    origSetState(newState, skipCb)
-                    RunDependencyChecks()
-                end
-
                 if id then
                     HollowLib.Flags[id] = Toggle
                     if env.Toggles then env.Toggles[id] = Toggle end
@@ -867,10 +864,10 @@ function HollowLib:CreateWindow(config)
                 return Toggle
             end
 
-            -- ADD SLIDER
             function Group:AddSlider(id, cfg)
                 local Slider = {}
                 local min = cfg.Min or 0 local max = cfg.Max or 100
+                local step = cfg.Step or 1
                 local value = math.clamp(cfg.Default or min, min, max)
                 local rounding = cfg.Rounding or 0 local suffix = cfg.Suffix or ""
                 local callback = cfg.Callback or function() end
@@ -880,11 +877,9 @@ function HollowLib:CreateWindow(config)
                 Container.BackgroundTransparency = 1
                 MakePadding(Container, 1, 1, 4, 4)
 
-                -- Label + value on same row
                 local SliderLabel = MakeLabel(Container, cfg.Text or id, 10, Theme.TextDim, Enum.Font.Gotham)
                 SliderLabel.Size = UDim2.new(1,0,0,11)
 
-                -- Compact track
                 local SliderBG = MakeFrame(Container, UDim2.new(1,0,0,12), UDim2.new(0,0,0,14), Theme.SliderBG)
                 MakeCorner(SliderBG, 3)
 
@@ -893,7 +888,6 @@ function HollowLib:CreateWindow(config)
                 local SliderFill = MakeFrame(SliderBG, UDim2.new(alpha,0,1,0), nil, Theme.SliderFill)
                 MakeCorner(SliderFill, 3)
 
-                -- Value text centered on bar
                 local ValueLabel = MakeLabel(SliderBG, tostring(value) .. suffix .. "/" .. tostring(max) .. suffix, 8, Theme.Text, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
                 ValueLabel.Size = UDim2.new(1,0,1,0)
                 ValueLabel.TextYAlignment = Enum.TextYAlignment.Center
@@ -906,8 +900,12 @@ function HollowLib:CreateWindow(config)
 
                 local function UpdateSlider(input)
                     local rel = math.clamp((input.Position.X - SliderBG.AbsolutePosition.X) / SliderBG.AbsoluteSize.X, 0, 1)
-                    value = min + (max-min) * rel
-                    value = rounding == 0 and math.floor(value) or math.floor(value*(10^rounding)+0.5)/(10^rounding)
+                    local raw = min + (max-min) * rel
+                    -- Apply step
+                    value = raw - (raw % step)
+                    if rounding > 0 then
+                        value = math.floor(value * (10^rounding) + 0.5) / (10^rounding)
+                    end
                     value = math.clamp(value, min, max)
                     local a = (value-min)/(max-min)
                     Tween(SliderFill, {Size=UDim2.new(a,0,1,0)}, 0.06, Enum.EasingStyle.Quart)
@@ -915,6 +913,7 @@ function HollowLib:CreateWindow(config)
                     Slider.Value = value
                     callback(value)
                     if sliderOnChanged then pcall(sliderOnChanged, value) end
+                    RunDependencyChecks()
                 end
 
                 SliderBtn.MouseButton1Down:Connect(function() dragging = true end)
@@ -929,12 +928,14 @@ function HollowLib:CreateWindow(config)
                 end)
 
                 function Slider:SetValue(v)
-                    value = math.clamp(v,min,max) local a=(value-min)/(max-min)
+                    value = math.clamp(v,min,max)
+                    local a=(value-min)/(max-min)
                     Tween(SliderFill,{Size=UDim2.new(a,0,1,0)},0.15)
                     ValueLabel.Text = tostring(value) .. suffix .. "/" .. tostring(max) .. suffix
                     Slider.Value = value
                     callback(value)
                     if sliderOnChanged then pcall(sliderOnChanged, value) end
+                    RunDependencyChecks()
                 end
                 function Slider:GetValue() return value end
                 Slider.Value = value
@@ -944,22 +945,18 @@ function HollowLib:CreateWindow(config)
                     HollowLib.Flags[id] = Slider
                     if env.Options then env.Options[id] = Slider end
                 end
-                AddDependencySupport(Slider, Row)
+                AddDependencySupport(Slider, Container)
                 return Slider
             end
 
-            -- ADD BUTTON (supports both formats: AddButton('text', fn) and AddButton({Text, Func}))
             function Group:AddButton(textOrCfg, callbackArg)
                 local text, callback
                 if type(textOrCfg) == "string" then
                     text = textOrCfg
                     callback = callbackArg or function() end
-                elseif type(textOrCfg) == "table" then
+                else
                     text = textOrCfg.Text or "Button"
                     callback = textOrCfg.Func or textOrCfg.Callback or function() end
-                else
-                    text = "Button"
-                    callback = function() end
                 end
 
                 local Btn = MakeButton(ItemContainer, UDim2.new(1,0,0,26), nil, Theme.ItemBG)
@@ -969,7 +966,6 @@ function HollowLib:CreateWindow(config)
                 local BtnLabel = MakeLabel(Btn, text, 11, Theme.TextDim, Enum.Font.Gotham, Enum.TextXAlignment.Center)
                 BtnLabel.Size = UDim2.new(1,0,1,0) BtnLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-                -- Underline
                 local BtnLine = MakeFrame(Btn, UDim2.new(1,-12,0,1), UDim2.new(0,6,1,-2), Theme.Border)
 
                 Btn.MouseEnter:Connect(function()
@@ -980,18 +976,10 @@ function HollowLib:CreateWindow(config)
                     Tween(BtnLabel, {TextColor3=Theme.TextDim}, 0.1)
                     Tween(BtnLine, {BackgroundColor3=Theme.Border}, 0.1)
                 end)
-                Btn.MouseButton1Down:Connect(function()
-                    Tween(BtnLabel, {TextColor3=Theme.Text}, 0.05)
-                end)
-                Btn.MouseButton1Up:Connect(function()
-                    Tween(BtnLabel, {TextColor3=Theme.Accent}, 0.1)
-                end)
                 Btn.MouseButton1Click:Connect(callback)
-
                 return Btn
             end
 
-            -- ADD DROPDOWN (scrollable text list, click outside to close)
             function Group:AddDropdown(id, cfg)
                 local Dropdown = {}
                 local values = cfg.Values or {}
@@ -1029,7 +1017,6 @@ function HollowLib:CreateWindow(config)
                 DropArrow.ScaleType = Enum.ScaleType.Fit
                 DropArrow.Parent = Header
 
-                -- Search bar (opt-in with cfg.Search = true)
                 local hasSearch = cfg.Search or false
                 local searchFilter = ""
                 local SearchBox
@@ -1054,7 +1041,6 @@ function HollowLib:CreateWindow(config)
                     MakePadding(SearchBox, 0, 0, 6, 6)
                 end
 
-                -- Scrollable option list
                 local searchH = hasSearch and 20 or 0
                 local listH = math.min(#values, maxVisible) * 20 + 6
                 local OptionScroll = Instance.new("ScrollingFrame")
@@ -1112,6 +1098,7 @@ function HollowLib:CreateWindow(config)
                                     CloseDropdown()
                                 end
                                 BuildOptions(searchFilter)
+                                RunDependencyChecks()
                             end)
                         end
                     end
@@ -1136,7 +1123,6 @@ function HollowLib:CreateWindow(config)
                 end)
                 BuildOptions()
 
-                -- Close when clicking outside
                 UserInputService.InputBegan:Connect(function(input)
                     if not open then return end
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1185,7 +1171,6 @@ function HollowLib:CreateWindow(config)
                 return Dropdown
             end
 
-            -- ADD LABEL
             function Group:AddLabel(text, richText)
                 local Label = {}
                 local LabelFrame = MakeFrame(ItemContainer, UDim2.new(1,0,0,16), nil, Theme.ItemBG)
@@ -1195,17 +1180,15 @@ function HollowLib:CreateWindow(config)
                 LabelText.Size = UDim2.new(1,0,1,0) LabelText.TextYAlignment = Enum.TextYAlignment.Center
                 LabelText.RichText = richText or false LabelText.TextWrapped = true
 
-                -- Chaining support for LinoriaLib compat
                 function Label:AddKeyPicker(pid, pcfg) pcfg = pcfg or {} return Group:AddKeybindPicker(pid, pcfg) end
                 function Label:AddColorPicker(pid, pcfg) return Group:AddColorPicker(pid, pcfg or {}) end
                 function Label:SetText(t) LabelText.Text = t end
                 Label.Text = LabelText
 
-                AddDependencySupport(Label, Row)
+                AddDependencySupport(Label, LabelFrame)
                 return Label
             end
 
-            -- ADD DIVIDER
             function Group:AddDivider()
                 local Div = MakeFrame(ItemContainer, UDim2.new(1,0,0,6), nil, Theme.GroupBG)
                 Div.BackgroundTransparency = 1
@@ -1214,7 +1197,6 @@ function HollowLib:CreateWindow(config)
                 return Div
             end
 
-            -- ADD COLOR PICKER (Modern 2D: SV square + Hue bar, draggable)
             function Group:AddColorPicker(id, cfg)
                 local ColorPicker = {}
                 local color = cfg.Default or Color3.fromRGB(255,255,255)
@@ -1231,14 +1213,13 @@ function HollowLib:CreateWindow(config)
                 local ColorBtn = MakeButton(Container, UDim2.new(0,22,0,12), UDim2.new(1,-24,0.5,-6), color)
                 MakeCorner(ColorBtn, 3) MakeStroke(ColorBtn, Theme.BorderBright, 1)
 
-                -- Popup
+                -- Popup (compact)
                 local popupW, popupH = 195, 232
                 local PickerPopup = MakeFrame(ScreenGui, UDim2.new(0,popupW,0,popupH), UDim2.new(0,0,0,0), Theme.Background)
                 PickerPopup.Visible = false PickerPopup.ZIndex = 100
                 PickerPopup.BackgroundTransparency = 0.05
                 MakeCorner(PickerPopup, Radius.Group) MakeStroke(PickerPopup, Theme.BorderBright, 1)
 
-                -- Draggable title bar
                 local PickerBar = MakeFrame(PickerPopup, UDim2.new(1,0,0,24), nil, Theme.GroupHeader)
                 PickerBar.ZIndex = 101 PickerBar.BackgroundTransparency = 0.5
                 MakeCorner(PickerBar, Radius.Group)
@@ -1251,13 +1232,11 @@ function HollowLib:CreateWindow(config)
 
                 MakeDraggable(PickerBar, PickerPopup)
 
-                -- SV Square
                 local svSize = 135
                 local SVFrame = MakeFrame(PickerPopup, UDim2.new(0,svSize,0,svSize), UDim2.new(0,10,0,32), Color3.fromHSV(0,1,1))
                 SVFrame.ZIndex = 101
                 MakeCorner(SVFrame, 6) SVFrame.ClipsDescendants = true
 
-                -- White gradient left to right (saturation)
                 local WhiteOverlay = Instance.new("Frame")
                 WhiteOverlay.Size = UDim2.new(1,0,1,0)
                 WhiteOverlay.BackgroundColor3 = Color3.new(1,1,1)
@@ -1271,7 +1250,6 @@ function HollowLib:CreateWindow(config)
                 })
                 wg.Parent = WhiteOverlay
 
-                -- Black gradient top to bottom (value)
                 local BlackOverlay = Instance.new("Frame")
                 BlackOverlay.Size = UDim2.new(1,0,1,0)
                 BlackOverlay.BackgroundColor3 = Color3.new(0,0,0)
@@ -1286,7 +1264,6 @@ function HollowLib:CreateWindow(config)
                 bg.Rotation = 90
                 bg.Parent = BlackOverlay
 
-                -- SV Cursor (circle)
                 local SVCursor = MakeFrame(SVFrame, UDim2.new(0,10,0,10), UDim2.new(0,0,0,0), Color3.new(1,1,1))
                 SVCursor.ZIndex = 105
                 MakeCorner(SVCursor, 5) MakeStroke(SVCursor, Color3.new(0,0,0), 2)
@@ -1294,7 +1271,6 @@ function HollowLib:CreateWindow(config)
                 local SVBtn = MakeButton(SVFrame, UDim2.new(1,0,1,0), nil, Theme.Background)
                 SVBtn.BackgroundTransparency = 1 SVBtn.ZIndex = 104
 
-                -- Hue bar (vertical, right side)
                 local HueBar = MakeFrame(PickerPopup, UDim2.new(0,18,0,svSize), UDim2.new(0,svSize+14,0,32), Color3.new(1,1,1))
                 HueBar.ZIndex = 101
                 MakeCorner(HueBar, 4) HueBar.ClipsDescendants = true
@@ -1312,7 +1288,6 @@ function HollowLib:CreateWindow(config)
                 HueGrad.Rotation = 90
                 HueGrad.Parent = HueBar
 
-                -- Hue cursor
                 local HueCursor = MakeFrame(HueBar, UDim2.new(1,4,0,4), UDim2.new(0,-2,0,0), Color3.new(1,1,1))
                 HueCursor.ZIndex = 106
                 MakeCorner(HueCursor, 2) MakeStroke(HueCursor, Color3.new(0,0,0), 1)
@@ -1320,7 +1295,6 @@ function HollowLib:CreateWindow(config)
                 local HueBtn = MakeButton(HueBar, UDim2.new(1,0,1,0), nil, Theme.Background)
                 HueBtn.BackgroundTransparency = 1 HueBtn.ZIndex = 105
 
-                -- Hex + RGB display
                 local HexRow = MakeFrame(PickerPopup, UDim2.new(0,popupW-20,0,20), UDim2.new(0,10,0,svSize+36), Theme.DropBG)
                 HexRow.ZIndex = 101
                 MakeCorner(HexRow, 4) MakeStroke(HexRow, Theme.Border, 1)
@@ -1333,7 +1307,6 @@ function HollowLib:CreateWindow(config)
                 RGBLabel.Size = UDim2.new(0.55,0,1,0) RGBLabel.Position = UDim2.new(0.45,0,0,0)
                 RGBLabel.ZIndex = 102 RGBLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-                -- Preview swatch
                 local PreviewSwatch = MakeFrame(PickerPopup, UDim2.new(0,popupW-20,0,12), UDim2.new(0,10,0,svSize+60), color)
                 PreviewSwatch.ZIndex = 101
                 MakeCorner(PreviewSwatch, 4) MakeStroke(PreviewSwatch, Theme.Border, 1)
@@ -1355,7 +1328,6 @@ function HollowLib:CreateWindow(config)
                     callback(color)
                 end
 
-                -- SV drag
                 local svDrag = false
                 SVBtn.MouseButton1Down:Connect(function() svDrag = true end)
                 UserInputService.InputChanged:Connect(function(input)
@@ -1369,7 +1341,6 @@ function HollowLib:CreateWindow(config)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then svDrag = false end
                 end)
 
-                -- Hue drag
                 local hueDrag = false
                 HueBtn.MouseButton1Down:Connect(function() hueDrag = true end)
                 UserInputService.InputChanged:Connect(function(input)
@@ -1395,7 +1366,6 @@ function HollowLib:CreateWindow(config)
                     end
                 end)
 
-                -- Close when clicking outside
                 UserInputService.InputBegan:Connect(function(input)
                     if not pickerOpen then return end
                     if svDrag or hueDrag then return end
@@ -1427,11 +1397,9 @@ function HollowLib:CreateWindow(config)
                 return ColorPicker
             end
 
-            -- ADD KEYBIND PICKER
             function Group:AddKeybindPicker(id, cfg)
                 cfg = cfg or {}
                 local KB = {}
-                -- Handle empty string, string key names, or nil defaults
                 local key = cfg.Default
                 if not key or key == '' or type(key) == 'string' then
                     if type(key) == 'string' and key ~= '' then
@@ -1464,7 +1432,6 @@ function HollowLib:CreateWindow(config)
                 local KBText = MakeLabel(KBBtn, keyName, 9, Theme.Accent, Enum.Font.GothamMedium, Enum.TextXAlignment.Center)
                 KBText.Size = UDim2.new(1,0,1,0) KBText.TextYAlignment = Enum.TextYAlignment.Center
 
-                -- Click to rebind
                 KBBtn.MouseButton1Click:Connect(function()
                     if listening then return end
                     listening = true KBText.Text = "..." KBText.TextColor3 = Theme.Text
@@ -1477,7 +1444,18 @@ function HollowLib:CreateWindow(config)
                                 Tween(KBBtn, {BackgroundColor3=Theme.DropBG}, 0.15)
                                 listening = false conn:Disconnect() return
                             end
-                            key = input.KeyCode KBText.Text = tostring(key.Name) KBText.TextColor3 = Theme.Accent
+                            -- Check if key already used
+                            if IsKeyUsed(input.KeyCode) and input.KeyCode ~= key then
+                                Library:Notify("Key already in use!", 2)
+                                return
+                            end
+                            -- Remove old key from registry
+                            if key ~= Enum.KeyCode.Unknown then
+                                _usedKeys[key] = math.max(0, (_usedKeys[key] or 0) - 1)
+                            end
+                            key = input.KeyCode
+                            _usedKeys[key] = (_usedKeys[key] or 0) + 1
+                            KBText.Text = tostring(key.Name) KBText.TextColor3 = Theme.Accent
                             Tween(KBBtn, {BackgroundColor3=Theme.DropBG}, 0.15)
                             listening = false callback(key)
                             if cfg.IsHideKey then
@@ -1485,6 +1463,7 @@ function HollowLib:CreateWindow(config)
                             end
                             KB.Value = key
                             conn:Disconnect()
+                            RunDependencyChecks()
                         end
                     end)
                 end)
@@ -1492,9 +1471,9 @@ function HollowLib:CreateWindow(config)
                 KBBtn.MouseEnter:Connect(function() if not listening then Tween(KBBtn,{BackgroundColor3=Theme.GroupHeader},0.1) end end)
                 KBBtn.MouseLeave:Connect(function() if not listening then Tween(KBBtn,{BackgroundColor3=Theme.DropBG},0.1) end end)
 
-                -- Register in global keybind registry for SyncToggleState
+                -- Register in global registry
                 if syncToggle and id then
-                    table.insert(_keybindRegistry, {
+                    RegisterKeybind({
                         id = id,
                         parentToggle = cfg._parentToggle,
                         getKey = function() return key end,
@@ -1503,7 +1482,26 @@ function HollowLib:CreateWindow(config)
                     })
                 end
 
-                function KB:SetValue(k) key=k KBText.Text=tostring(k.Name) if cfg.IsHideKey then hideKey=k end KB.Value=k end
+                -- Cleanup on unload
+                if config.OnUnload then
+                    local oldUnload = config.OnUnload
+                    config.OnUnload = function()
+                        UnregisterKeybind({
+                            getKey = function() return key end,
+                            isListening = function() return false end,
+                        })
+                        oldUnload()
+                    end
+                end
+
+                function KB:SetValue(k)
+                    if key ~= Enum.KeyCode.Unknown then _usedKeys[key] = math.max(0, (_usedKeys[key] or 0) - 1) end
+                    key = k
+                    if key ~= Enum.KeyCode.Unknown then _usedKeys[key] = (_usedKeys[key] or 0) + 1 end
+                    KBText.Text = tostring(k.Name)
+                    if cfg.IsHideKey then hideKey = k end
+                    KB.Value = k
+                end
                 function KB:GetValue() return key end
 
                 KB.Value = key
@@ -1515,7 +1513,6 @@ function HollowLib:CreateWindow(config)
                 return KB
             end
 
-            -- ADD TEXT INPUT
             function Group:AddInput(id, cfg)
                 local Input = {}
                 local value = cfg.Default or ""
@@ -1554,12 +1551,12 @@ function HollowLib:CreateWindow(config)
                     callback(value, enter)
                 end)
 
-                -- Live text change - fires callback and OnChanged on every keystroke
                 InputBox:GetPropertyChangedSignal("Text"):Connect(function()
                     value = InputBox.Text
                     Input.Value = value
                     if not finished then callback(value, false) end
                     if Input._onChanged then Input._onChanged() end
+                    RunDependencyChecks()
                 end)
 
                 InputBox.Focused:Connect(function()
@@ -1582,7 +1579,6 @@ function HollowLib:CreateWindow(config)
                 return Input
             end
 
-            -- ADD SEARCH BAR (standalone search input with callback on each keystroke)
             function Group:AddSearchBar(cfg)
                 local SearchBar = {}
                 local callback = cfg.Callback or function() end
@@ -1635,10 +1631,10 @@ function HollowLib:CreateWindow(config)
                 return SearchBar
             end
 
-            -- Alias AddKeyPicker -> AddKeybindPicker for LinoriaLib compat
+            -- Alias
             Group.AddKeyPicker = Group.AddKeybindPicker
 
-            -- Wrap all Group:Add methods in pcall for resilience
+            -- Error safety
             local SafeReturn = {Value = nil}
             function SafeReturn:SetValue() end
             function SafeReturn:SetValues() end
@@ -1648,12 +1644,11 @@ function HollowLib:CreateWindow(config)
             function SafeReturn:AddKeyPicker() return SafeReturn end
             function SafeReturn:SetText() end
 
-            local rawGroup = {}
-            for k, v in pairs(Group) do rawGroup[k] = v end
-            for methodName, method in pairs(rawGroup) do
+            for methodName, method in pairs(Group) do
                 if type(method) == "function" and methodName:sub(1,3) == "Add" then
+                    local old = method
                     Group[methodName] = function(self, ...)
-                        local ok, result = pcall(method, self, ...)
+                        local ok, result = pcall(old, self, ...)
                         if ok then return result end
                         return SafeReturn
                     end
@@ -1671,16 +1666,14 @@ function HollowLib:CreateWindow(config)
         function Tab:AddRightGroupbox(name) return AddGroupInternal(name, RightCol) end
         function Tab:AddGroupbox(name) return AddGroupInternal(name, LeftCol) end
 
-        -- TRUE TabBox - single box with switchable tab headers
+        -- TabBox with internal groupbox
         local function CreateTabBox(col)
-            -- Outer frame with border
             local TBFrame = MakeFrame(col, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
             pcall(function() TBFrame.AutomaticSize = Enum.AutomaticSize.Y end)
             TBFrame.ClipsDescendants = true
             MakeCorner(TBFrame, Radius.Group)
             MakeStroke(TBFrame, Theme.Border, 1)
 
-            -- Tab header
             local TBHeader = MakeFrame(TBFrame, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
             TBHeader.BackgroundTransparency = 0.5 TBHeader.ZIndex = 2
             local hl = Instance.new("UIListLayout")
@@ -1693,7 +1686,6 @@ function HollowLib:CreateWindow(config)
             function TBObj:AddTab(tabName)
                 local idx = #tbTabs + 1
 
-                -- Header button
                 local tbBtn = Instance.new("TextButton")
                 tbBtn.BackgroundTransparency = 1 tbBtn.Text = tabName
                 tbBtn.Font = Enum.Font.GothamMedium tbBtn.TextSize = 11
@@ -1704,7 +1696,6 @@ function HollowLib:CreateWindow(config)
                 MakeCorner(tbLine, 1)
                 tbLine.BackgroundTransparency = idx == 1 and 0 or 1
 
-                -- Content frame for this tab
                 local tbContent = MakeFrame(TBFrame, UDim2.new(1,0,0,0), UDim2.new(0,0,0,28), Theme.GroupBG)
                 tbContent.BackgroundTransparency = 1
                 pcall(function() tbContent.AutomaticSize = Enum.AutomaticSize.Y end)
@@ -1715,7 +1706,6 @@ function HollowLib:CreateWindow(config)
                 table.insert(tbTabs, {btn=tbBtn, content=tbContent, line=tbLine})
                 for _, t in ipairs(tbTabs) do t.btn.Size = UDim2.new(1/#tbTabs, 0, 1, 0) end
 
-                -- Switch tabs
                 tbBtn.MouseButton1Click:Connect(function()
                     for _, t in ipairs(tbTabs) do
                         t.content.Visible = false
@@ -1727,8 +1717,6 @@ function HollowLib:CreateWindow(config)
                     Tween(tbLine, {BackgroundTransparency=0}, 0.15)
                 end)
 
-                -- Each tab gets its OWN independent Group via AddGroupInternal
-                -- passing tbContent so elements go directly to this tab's frame
                 local tabGroup = AddGroupInternal(tabName, col, tbContent)
                 return tabGroup
             end
@@ -1739,73 +1727,20 @@ function HollowLib:CreateWindow(config)
         function Tab:AddLeftTabbox() return CreateTabBox(LeftCol) end
         function Tab:AddRightTabbox() return CreateTabBox(RightCol) end
 
-
-
-
         return Tab
     end
 
-    -- Notify
-    local notifStack = {}
+    -- ===== Window Methods =====
     function Window:Notify(text, duration)
-        duration = duration or 3
-        local title = "Notice"
-        local desc = tostring(text)
+        local title, desc
         if type(text) == "table" then
             title = text.Title or "Notice"
             desc = text.Description or ""
+        else
+            title = "Notice"
+            desc = tostring(text)
         end
-
-        -- Push existing notifs up
-        for _, nf in ipairs(notifStack) do
-            local cur = nf.Position
-            Tween(nf, {Position=UDim2.new(cur.X.Scale,cur.X.Offset,cur.Y.Scale,cur.Y.Offset-56)}, 0.35, Enum.EasingStyle.Quint)
-        end
-
-        -- Container
-        local NF = MakeFrame(ScreenGui, UDim2.new(0,250,0,48), UDim2.new(1,12,1,-60), Theme.Background)
-        NF.BackgroundTransparency = 0.08
-        NF.ClipsDescendants = true
-        MakeCorner(NF, 10)
-        local NFStroke = MakeStroke(NF, Theme.Accent, 1)
-        NFStroke.Transparency = 0.6
-
-        -- Left accent bar
-        local NBar = MakeFrame(NF, UDim2.new(0,3,1,-10), UDim2.new(0,6,0,5), Theme.Accent)
-        MakeCorner(NBar, 2)
-
-        -- Title
-        local NTitle = MakeLabel(NF, title, 11, Theme.Text, Enum.Font.GothamBold)
-        NTitle.Size = UDim2.new(1,-24,0,14) NTitle.Position = UDim2.new(0,16,0,6)
-
-        -- Description
-        local NDesc = MakeLabel(NF, desc, 9, Theme.TextDim, Enum.Font.Gotham)
-        NDesc.Size = UDim2.new(1,-24,0,13) NDesc.Position = UDim2.new(0,16,0,22)
-        NDesc.TextWrapped = true
-
-        -- Bottom progress bar
-        local NProgress = MakeFrame(NF, UDim2.new(1,0,0,2), UDim2.new(0,0,1,-2), Theme.Accent)
-        NProgress.BackgroundTransparency = 0.5
-        MakeCorner(NProgress, 1)
-
-        table.insert(notifStack, 1, NF)
-
-        -- Slide in
-        Tween(NF, {Position=UDim2.new(1,-262,1,-60)}, 0.4, Enum.EasingStyle.Quint)
-
-        -- Drain progress bar
-        task.delay(0.45, function()
-            Tween(NProgress, {Size=UDim2.new(0,0,0,2)}, duration - 0.5, Enum.EasingStyle.Linear)
-        end)
-
-        -- Fade out
-        task.delay(duration, function()
-            Tween(NF, {Position=UDim2.new(1,12,1,-60)}, 0.35, Enum.EasingStyle.Quint)
-            Tween(NFStroke, {Transparency=1}, 0.3)
-            task.wait(0.4)
-            for i, v in ipairs(notifStack) do if v == NF then table.remove(notifStack, i) break end end
-            NF:Destroy()
-        end)
+        PushNotification(title, desc, duration)
     end
 
     function Window:SetWatermark(text) WMName.Text = text end
@@ -1829,46 +1764,6 @@ function HollowLib:CreateWindow(config)
         WMBar.BackgroundColor3 = color
     end
 
-    -- Resize handle (bottom-right corner)
-    local ResizeHandle = Instance.new("TextButton")
-    ResizeHandle.Size = UDim2.new(0,16,0,16)
-    ResizeHandle.Position = UDim2.new(1,-16,1,-16)
-    ResizeHandle.BackgroundTransparency = 1
-    ResizeHandle.Text = ""
-    ResizeHandle.ZIndex = 10
-    ResizeHandle.Parent = Main
-
-    -- Resize dots visual
-    local ResizeDots = MakeLabel(ResizeHandle, "...", 10, Theme.TextDisabled, Enum.Font.GothamBold, Enum.TextXAlignment.Center)
-    ResizeDots.Size = UDim2.new(1,0,1,0) ResizeDots.TextYAlignment = Enum.TextYAlignment.Bottom
-    ResizeDots.Rotation = -45
-
-    do
-        local resizing = false
-        local startInput, startSize
-        ResizeHandle.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                resizing = true
-                startInput = input.Position
-                startSize = Main.AbsoluteSize
-            end
-        end)
-        UserInputService.InputChanged:Connect(function(input)
-            if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                local delta = input.Position - startInput
-                local newW = math.max(minW, startSize.X + delta.X)
-                local newH = math.max(minH, startSize.Y + delta.Y)
-                curW = newW curH = newH
-                Main.Size = UDim2.new(0, newW, 0, newH)
-            end
-        end)
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                resizing = false
-            end
-        end)
-    end
-
     function Window:Unload()
         ScreenGui:Destroy()
         if getgenv()._HollowUnload then getgenv()._HollowUnload() end
@@ -1878,20 +1773,12 @@ function HollowLib:CreateWindow(config)
     return Window
 end
 
--- =============================================
--- LINORIALIB COMPATIBILITY LAYER
--- =============================================
--- Makes HollowLib API-compatible with LinoriaLib scripts
--- Usage: local Library = loadstring(...)() works the same way
-
--- Global tables for LinoriaLib compat
--- Force into all global scopes so the calling script can access them
+-- ===== LinoriaLib Compatibility =====
 getgenv().Options = env.Options
 getgenv().Toggles = env.Toggles
 Options = env.Options
 Toggles = env.Toggles
 
--- Library wrapper
 local _createdWindow = nil
 local _unloadCallbacks = {}
 
