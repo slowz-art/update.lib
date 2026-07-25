@@ -2,7 +2,6 @@
 -- HollowLib v2.3 | Made by hollowoodz
 -- Red & Dark Theme | Left Sidebar | Two Column Layout | Mobile Support
 -- Now with FULL 1up API + CUSTOM BACKGROUND TEXTURE support
--- TabBox transparency fixed
 -- =====================================================================
 
 local HollowLib = {}
@@ -266,7 +265,7 @@ function HollowLib:CreateWindow(config)
     local titleType = config.TitleType or "static"
     local words = config.Words or {"Welcome"}
     
-    -- NEW: Background texture settings
+    -- Background texture settings
     local bgTexture = config.Background or nil
     local bgTransparency = config.BackgroundTransparency or 0.65
     local bgColor = config.BackgroundColor or Theme.Background
@@ -1716,12 +1715,12 @@ function HollowLib:CreateWindow(config)
             local TBFrame = MakeFrame(col, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
             pcall(function() TBFrame.AutomaticSize = Enum.AutomaticSize.Y end)
             TBFrame.ClipsDescendants = true
-            TBFrame.BackgroundTransparency = 1   -- FIX: transparent like groupboxes
+            TBFrame.BackgroundTransparency = 1
             MakeCorner(TBFrame, Radius.Group)
             MakeStroke(TBFrame, Theme.Border, 1)
 
             local TBHeader = MakeFrame(TBFrame, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
-            TBHeader.BackgroundTransparency = 1   -- FIX: header transparent
+            TBHeader.BackgroundTransparency = 1
             TBHeader.ZIndex = 2
             local hl = Instance.new("UIListLayout")
             hl.FillDirection = Enum.FillDirection.Horizontal
@@ -1748,7 +1747,7 @@ function HollowLib:CreateWindow(config)
                 tbLine.BackgroundTransparency = idx == 1 and 0 or 1
 
                 local tbContent = MakeFrame(TBFrame, UDim2.new(1,0,0,0), UDim2.new(0,0,0,28), Theme.GroupBG)
-                tbContent.BackgroundTransparency = 1   -- FIX: content transparent
+                tbContent.BackgroundTransparency = 1
                 pcall(function() tbContent.AutomaticSize = Enum.AutomaticSize.Y end)
                 tbContent.Visible = (idx == 1)
                 MakePadding(tbContent, 8, 10, 8, 8)
@@ -1803,12 +1802,12 @@ function HollowLib:CreateWindow(config)
     function Window:SetUsername(name) end
     function Window:SetLogo(textureId) if LogoImg then LogoImg.Image = "rbxassetid://"..tostring(textureId) end end
     
-    -- NEW: Background texture methods
+    -- ===== BACKGROUND METHODS (NATIVE SUPPORT) =====
     function Window:SetBackground(textureId, transparency)
         local id = tostring(textureId)
         if tonumber(id) then id = "rbxassetid://" .. id end
         BGImage.Image = id
-        if transparency then BGImage.ImageTransparency = transparency end
+        if transparency ~= nil then BGImage.ImageTransparency = transparency end
     end
     
     function Window:SetBackgroundColor(color)
@@ -1817,6 +1816,18 @@ function HollowLib:CreateWindow(config)
     
     function Window:SetBackgroundTransparency(transparency)
         BGImage.ImageTransparency = transparency
+    end
+
+    function Window:GetBackgroundTransparency()
+        return BGImage.ImageTransparency
+    end
+
+    function Window:GetBackgroundColor()
+        return BGImage.BackgroundColor3
+    end
+
+    function Window:GetBackgroundImage()
+        return BGImage.Image
     end
 
     function Window:SetAccent(color)
