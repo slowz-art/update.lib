@@ -2,6 +2,7 @@
 -- HollowLib v2.3 | Made by hollowoodz
 -- Red & Dark Theme | Left Sidebar | Two Column Layout | Mobile Support
 -- Now with FULL 1up API + CUSTOM BACKGROUND TEXTURE support
+-- TabBox transparency fixed
 -- =====================================================================
 
 local HollowLib = {}
@@ -1710,18 +1711,22 @@ function HollowLib:CreateWindow(config)
         function Tab:AddRightGroupbox(name) return AddGroupInternal(name, RightCol) end
         function Tab:AddGroupbox(name) return AddGroupInternal(name, LeftCol) end
 
+        -- ===== TAB BOX (with transparency fix) =====
         local function CreateTabBox(col)
             local TBFrame = MakeFrame(col, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
             pcall(function() TBFrame.AutomaticSize = Enum.AutomaticSize.Y end)
             TBFrame.ClipsDescendants = true
+            TBFrame.BackgroundTransparency = 1   -- FIX: transparent like groupboxes
             MakeCorner(TBFrame, Radius.Group)
             MakeStroke(TBFrame, Theme.Border, 1)
 
             local TBHeader = MakeFrame(TBFrame, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
-            TBHeader.BackgroundTransparency = 0.5 TBHeader.ZIndex = 2
+            TBHeader.BackgroundTransparency = 1   -- FIX: header transparent
+            TBHeader.ZIndex = 2
             local hl = Instance.new("UIListLayout")
             hl.FillDirection = Enum.FillDirection.Horizontal
-            hl.Padding = UDim.new(0,0) hl.Parent = TBHeader
+            hl.Padding = UDim.new(0,0)
+            hl.Parent = TBHeader
 
             local tbTabs = {}
             local TBObj = {}
@@ -1730,24 +1735,29 @@ function HollowLib:CreateWindow(config)
                 local idx = #tbTabs + 1
 
                 local tbBtn = Instance.new("TextButton")
-                tbBtn.BackgroundTransparency = 1 tbBtn.Text = tabName
-                tbBtn.Font = Enum.Font.GothamMedium tbBtn.TextSize = 11
+                tbBtn.BackgroundTransparency = 1
+                tbBtn.Text = tabName
+                tbBtn.Font = Enum.Font.GothamMedium
+                tbBtn.TextSize = 11
                 tbBtn.TextColor3 = idx == 1 and Theme.Text or Theme.TextDim
-                tbBtn.BorderSizePixel = 0 tbBtn.Parent = TBHeader
+                tbBtn.BorderSizePixel = 0
+                tbBtn.Parent = TBHeader
 
                 local tbLine = MakeFrame(tbBtn, UDim2.new(0.5,0,0,2), UDim2.new(0.25,0,1,-2), Theme.Accent)
                 MakeCorner(tbLine, 1)
                 tbLine.BackgroundTransparency = idx == 1 and 0 or 1
 
                 local tbContent = MakeFrame(TBFrame, UDim2.new(1,0,0,0), UDim2.new(0,0,0,28), Theme.GroupBG)
-                tbContent.BackgroundTransparency = 1
+                tbContent.BackgroundTransparency = 1   -- FIX: content transparent
                 pcall(function() tbContent.AutomaticSize = Enum.AutomaticSize.Y end)
                 tbContent.Visible = (idx == 1)
                 MakePadding(tbContent, 8, 10, 8, 8)
                 MakeList(tbContent, 6)
 
                 table.insert(tbTabs, {btn=tbBtn, content=tbContent, line=tbLine})
-                for _, t in ipairs(tbTabs) do t.btn.Size = UDim2.new(1/#tbTabs, 0, 1, 0) end
+                for _, t in ipairs(tbTabs) do
+                    t.btn.Size = UDim2.new(1/#tbTabs, 0, 1, 0)
+                end
 
                 tbBtn.MouseButton1Click:Connect(function()
                     for _, t in ipairs(tbTabs) do
