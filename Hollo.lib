@@ -1,7 +1,7 @@
 -- =====================================================================
--- HollowLib v2.2 | Made by hollowoodz
+-- HollowLib v2.3 | Made by hollowoodz
 -- Red & Dark Theme | Left Sidebar | Two Column Layout | Mobile Support
--- Now with FULL 1up API compatibility layer
+-- Now with FULL 1up API + CUSTOM BACKGROUND TEXTURE support
 -- =====================================================================
 
 local HollowLib = {}
@@ -265,6 +265,11 @@ function HollowLib:CreateWindow(config)
     local titleType = config.TitleType or "static"
     local words = config.Words or {"Welcome"}
     
+    -- NEW: Background texture settings
+    local bgTexture = config.Background or nil
+    local bgTransparency = config.BackgroundTransparency or 0.65
+    local bgColor = config.BackgroundColor or Theme.Background
+    
     local curW, curH = winWidth, winHeight
     local minW, minH = 360, 380
 
@@ -285,23 +290,26 @@ function HollowLib:CreateWindow(config)
     Main.BackgroundTransparency = 0.15
     MakeCorner(Main, Radius.Window) MakeStroke(Main, Theme.Border, 1)
 
+    -- ===== BACKGROUND IMAGE WITH FULL TEXTURE SUPPORT =====
     local BGImage = Instance.new("ImageLabel")
     BGImage.Name = "BackgroundImage"
     BGImage.Size = UDim2.new(1,0,1,0)
     BGImage.Position = UDim2.new(0,0,0,0)
+    BGImage.BackgroundColor3 = bgColor
     BGImage.BackgroundTransparency = 1
-    BGImage.ImageTransparency = 0.65
+    BGImage.ImageTransparency = bgTransparency
     BGImage.ScaleType = Enum.ScaleType.Crop
     BGImage.ZIndex = 0
     BGImage.BorderSizePixel = 0
     BGImage.Parent = Main
     MakeCorner(BGImage, Radius.Window)
-    if config.Background then
-        local bgId = tostring(config.Background)
-        if tonumber(bgId) then bgId = "rbxassetid://" .. bgId end
-        BGImage.Image = bgId
+    if bgTexture then
+        local id = tostring(bgTexture)
+        if tonumber(id) then id = "rbxassetid://" .. id end
+        BGImage.Image = id
     end
 
+    -- Shadow
     local ShadowHolder = Instance.new("Frame")
     ShadowHolder.Size = UDim2.new(1,0,1,0)
     ShadowHolder.BackgroundTransparency = 1
@@ -849,7 +857,6 @@ function HollowLib:CreateWindow(config)
                 end
             end
 
-            -- ===== ADD TOGGLE =====
             function Group:AddToggle(id, cfg)
                 local Toggle = {}
                 local state = cfg.Default or false
@@ -920,7 +927,6 @@ function HollowLib:CreateWindow(config)
                 return Toggle
             end
 
-            -- ===== ADD SLIDER =====
             function Group:AddSlider(id, cfg)
                 local Slider = {}
                 local min = cfg.Min or 0 local max = cfg.Max or 100
@@ -1005,7 +1011,6 @@ function HollowLib:CreateWindow(config)
                 return Slider
             end
 
-            -- ===== ADD BUTTON =====
             function Group:AddButton(textOrCfg, callbackArg)
                 local text, callback
                 if type(textOrCfg) == "string" then
@@ -1037,7 +1042,6 @@ function HollowLib:CreateWindow(config)
                 return Btn
             end
 
-            -- ===== ADD DROPDOWN =====
             function Group:AddDropdown(id, cfg)
                 local Dropdown = {}
                 local values = cfg.Values or {}
@@ -1229,7 +1233,6 @@ function HollowLib:CreateWindow(config)
                 return Dropdown
             end
 
-            -- ===== ADD LABEL =====
             function Group:AddLabel(text, richText)
                 local Label = {}
                 local LabelFrame = MakeFrame(ItemContainer, UDim2.new(1,0,0,16), nil, Theme.ItemBG)
@@ -1248,7 +1251,6 @@ function HollowLib:CreateWindow(config)
                 return Label
             end
 
-            -- ===== ADD DIVIDER =====
             function Group:AddDivider()
                 local Div = MakeFrame(ItemContainer, UDim2.new(1,0,0,6), nil, Theme.GroupBG)
                 Div.BackgroundTransparency = 1
@@ -1257,7 +1259,6 @@ function HollowLib:CreateWindow(config)
                 return Div
             end
 
-            -- ===== ADD COLOR PICKER =====
             function Group:AddColorPicker(id, cfg)
                 local ColorPicker = {}
                 local color = cfg.Default or Color3.fromRGB(255,255,255)
@@ -1457,7 +1458,6 @@ function HollowLib:CreateWindow(config)
                 return ColorPicker
             end
 
-            -- ===== ADD KEYBIND PICKER =====
             function Group:AddKeybindPicker(id, cfg)
                 cfg = cfg or {}
                 local KB = {}
@@ -1559,7 +1559,6 @@ function HollowLib:CreateWindow(config)
                 return KB
             end
 
-            -- ===== ADD INPUT =====
             function Group:AddInput(id, cfg)
                 local Input = {}
                 local value = cfg.Default or ""
@@ -1626,7 +1625,6 @@ function HollowLib:CreateWindow(config)
                 return Input
             end
 
-            -- ===== ADD SEARCH BAR =====
             function Group:AddSearchBar(cfg)
                 local SearchBar = {}
                 local callback = cfg.Callback or function() end
@@ -1712,7 +1710,6 @@ function HollowLib:CreateWindow(config)
         function Tab:AddRightGroupbox(name) return AddGroupInternal(name, RightCol) end
         function Tab:AddGroupbox(name) return AddGroupInternal(name, LeftCol) end
 
-        -- ===== TAB BOX =====
         local function CreateTabBox(col)
             local TBFrame = MakeFrame(col, UDim2.new(1,0,0,28), nil, Theme.GroupBG)
             pcall(function() TBFrame.AutomaticSize = Enum.AutomaticSize.Y end)
@@ -1795,12 +1792,23 @@ function HollowLib:CreateWindow(config)
     function Window:SetDisplayName(name) PlayerName.Text = name end
     function Window:SetUsername(name) end
     function Window:SetLogo(textureId) if LogoImg then LogoImg.Image = "rbxassetid://"..tostring(textureId) end end
+    
+    -- NEW: Background texture methods
     function Window:SetBackground(textureId, transparency)
         local id = tostring(textureId)
         if tonumber(id) then id = "rbxassetid://" .. id end
         BGImage.Image = id
-        BGImage.ImageTransparency = transparency or 0.65
+        if transparency then BGImage.ImageTransparency = transparency end
     end
+    
+    function Window:SetBackgroundColor(color)
+        BGImage.BackgroundColor3 = color
+    end
+    
+    function Window:SetBackgroundTransparency(transparency)
+        BGImage.ImageTransparency = transparency
+    end
+
     function Window:SetAccent(color)
         Theme.Accent = color
         Theme.AccentDark = Color3.fromRGB(math.floor(color.R*180), math.floor(color.G*180), math.floor(color.B*180))
@@ -1837,7 +1845,7 @@ local function GetDefaultGroup()
             Height = 520,
             ShowLogo = false,
             TitleType = "sliding",
-            Words = {"1up Compatible", "HollowLib v2.2", "Full API Support"},
+            Words = {"1up Compatible", "HollowLib v2.3", "Full API Support"},
             Accent = Color3.fromRGB(220, 30, 30),
             HideKey = Enum.KeyCode.RightControl,
         })
