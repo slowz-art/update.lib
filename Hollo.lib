@@ -2094,28 +2094,14 @@ local Library do
         end
 
 
-
      Library.ESPPreview = function(self, Params)
     local Preview = {
         Player = nil
     }
 
-    local AlignPreviewToWindow = function(Frame)
-        local MainWindow = Library.MainWindowFrame
-
-        if not MainWindow then
-            return
-        end
-
-        local MainPos = MainWindow.Position
-        local MainSize = MainWindow.AbsoluteSize
-
-        Frame.Position = UDim2.new(0, MainPos.X.Offset + MainSize.X + 10, 0, MainPos.Y.Offset)
-    end
-
     local Items = {}
     do
-        Items["ESPPreview"] = Library:Create("Frame", {
+        Items["ESPPreview"] = Instances:Create("Frame", {
             Name = "\0",
             Parent = Library.Holder.Instance,
             Position = UDim2.new(0, 860, 0, 430),
@@ -2126,7 +2112,7 @@ local Library do
 
         Items["ESPPreview"]:MakeDraggable()
 
-        Library:Create("UIStroke", {
+        Instances:Create("UIStroke", {
             Name = "\0",
             Parent = Items["ESPPreview"].Instance,
             ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -2134,16 +2120,16 @@ local Library do
             Color = Library.Theme["Outline"]
         }):AddToTheme({ Color = 'Outline' })
 
-        Library:Create("UIStroke", {
+        Instances:Create("UIStroke", {
             Name = "\0",
             Parent = Items["ESPPreview"].Instance,
             ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
             LineJoinMode = Enum.LineJoinMode.Miter,
-            Color = Library.Theme["Border"],
+            Color = Library.Theme["Border"] or Library.Theme["Outline"],
             BorderOffset = UDim.new(0, 1)
         }):AddToTheme({ Color = 'Border' })
 
-        Items["AccentLiner"] = Library:Create("Frame", {
+        Items["AccentLiner"] = Instances:Create("Frame", {
             Name = "\0",
             Parent = Items["ESPPreview"].Instance,
             Size = UDim2.new(1, 0, 0, 1),
@@ -2151,22 +2137,22 @@ local Library do
             BackgroundColor3 = Library.Theme["Accent"]
         }):AddToTheme({ BackgroundColor3 = 'Accent' })
 
-        Items["DarkLiner"] = Library:Create("Frame", {
+        Items["DarkLiner"] = Instances:Create("Frame", {
             Name = "\0",
             Parent = Items["ESPPreview"].Instance,
             Position = UDim2.new(0, 0, 0, 1),
             Size = UDim2.new(1, 0, 0, 1),
             BorderSizePixel = 0,
-            BackgroundColor3 = Library.Theme["Light Border"]
-        }):AddToTheme({ BackgroundColor3 = 'Light Border' })
+            BackgroundColor3 = Library.Theme["Outline"]
+        }):AddToTheme({ BackgroundColor3 = 'Outline' })
 
-        Items["Text"] = Library:Create("TextLabel", {
+        Items["Text"] = Instances:Create("TextLabel", {
             Name = "\0",
             FontFace = Library.Font,
-            TextSize = Library.FontSize,
+            TextSize = 14,
             Parent = Items["ESPPreview"].Instance,
             TextColor3 = Library.Theme["Accent"],
-            Text = Params.Name,
+            Text = Params.Name or "ESP PREVIEW",
             Size = UDim2.new(0, 0, 0, 15),
             Position = UDim2.new(0, 10, 0, 6),
             BackgroundTransparency = 1,
@@ -2175,7 +2161,7 @@ local Library do
             AutomaticSize = Enum.AutomaticSize.X
         }):AddToTheme({ TextColor3 = 'Accent' })
 
-        Items["Background"] = Library:Create("TextButton", {
+        Items["Background"] = Instances:Create("TextButton", {
             Name = "\0",
             Parent = Items["ESPPreview"].Instance,
             Active = false,
@@ -2185,10 +2171,10 @@ local Library do
             Size = UDim2.new(1, -20, 1, -40),
             Selectable = false,
             BorderSizePixel = 0,
-            BackgroundColor3 = Library.Theme["Section"]
-        }):AddToTheme({ BackgroundColor3 = 'Section' })
+            BackgroundColor3 = Library.Theme["Section Background"] or Library.Theme["Background"]
+        }):AddToTheme({ BackgroundColor3 = 'Section Background' })
 
-        Library:Create("UIStroke", {
+        Instances:Create("UIStroke", {
             Name = "\0",
             Parent = Items["Background"].Instance,
             ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -2196,16 +2182,7 @@ local Library do
             Color = Library.Theme["Outline"]
         }):AddToTheme({ Color = 'Outline' })
 
-        Library:Create("UIStroke", {
-            Name = "\0",
-            Parent = Items["Background"].Instance,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-            LineJoinMode = Enum.LineJoinMode.Miter,
-            Color = Library.Theme["Border"],
-            BorderOffset = UDim.new(0, 1)
-        }):AddToTheme({ Color = 'Border' })
-
-        Items["Viewport"] = Library:Create("ViewportFrame", {
+        Items["Viewport"] = Instances:Create("ViewportFrame", {
             Name = "\0",
             Parent = Items["Background"].Instance,
             BackgroundTransparency = 1,
@@ -2214,18 +2191,11 @@ local Library do
         })
     end
 
-    AlignPreviewToWindow(Items["ESPPreview"].Instance)
-
     local IsVisible = true
-    local ApplyVisibility = function(IsWindowOpen)
-        Items["ESPPreview"].Instance.Visible = IsVisible and IsWindowOpen
-    end
-
-    Library:BindToWindowVisibility(ApplyVisibility)
 
     function Preview:SetVisibility(Bool)
         IsVisible = Bool
-        ApplyVisibility(Library.WindowOpenState)
+        Items["ESPPreview"].Instance.Visible = Bool
     end
 
     function Preview:SetText(Text)
@@ -2233,36 +2203,18 @@ local Library do
     end
 
     local ViewportCamera = Instance.new("Camera")
-
     Items["Viewport"].Instance.CurrentCamera = ViewportCamera
-    ViewportCamera.CameraType = Enum.CameraType.Track
-    ViewportCamera.Focus = CFrame.new(0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1)
-    ViewportCamera.CFrame = CFrame.new(0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1)
+    ViewportCamera.CameraType = Enum.CameraType.Scriptable
 
     local PreviewModel = nil
-    local RenderObjects = table.create(25)
+    local RenderObjects = {}
     local Connections = {}
-
     local OFFSET = CFrame.new(0, 2.5, -8.5)
 
     local ValidClasses = {
-        MeshPart = true,
-        Part = true,
-        Accoutrement = true,
-        Pants = true,
-        Shirt = true,
-        Humanoid = true,
-        BoxHandleAdornment = true,
-        CylinderHandleAdornment = true,
-        Highlight = true
+        MeshPart = true, Part = true, Accoutrement = true,
+        Pants = true, Shirt = true, Humanoid = true
     }
-
-    local function DisconnectAll()
-        for _, Connection in ipairs(Connections) do
-            Connection:Disconnect()
-        end
-        table.clear(Connections)
-    end
 
     local function ClearViewport()
         table.clear(RenderObjects)
@@ -2273,111 +2225,39 @@ local Library do
         end
     end
 
-    function Preview:RemoveObject(Object)
-        local Clone = RenderObjects[Object]
-        if not Clone then
-            return
-        end
-
-        RenderObjects[Object] = nil
-
-        if Clone.Parent and Clone.Parent:IsA("Accoutrement") then
-            Clone.Parent:Destroy()
-        else
-            Clone:Destroy()
-        end
-    end
-
-    function Preview:AddObject(Object)
-        if not Object or not ValidClasses[Object.ClassName] then
-            return
-        end
-
-        local IsArchivable = Object.Archivable
-        Object.Archivable = true
-        local Clone = Object:Clone()
-        Object.Archivable = IsArchivable
-
-        if Object:IsA("BasePart") then
-            RenderObjects[Object] = Clone
-        elseif Object:IsA("Accoutrement") then
-            if Object:FindFirstChild("Handle") and Clone:FindFirstChild("Handle") then
-                RenderObjects[Object.Handle] = Clone.Handle
-            end
-        elseif Object:IsA("Humanoid") then
-            Clone:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.Running, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.Landed, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.Flying, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
-            Clone:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
-            Clone.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-        end
-
-        return Clone
-    end
-
     function Preview:BuildFromModel(Model)
         ClearViewport()
-        DisconnectAll()
+        for _, c in ipairs(Connections) do c:Disconnect() end
+        table.clear(Connections)
 
         PreviewModel = Model
-        Preview.Player = Model
-
-        if not Model then
-            return
-        end
+        if not Model then return end
 
         local Viewmodel = Instance.new("Model")
         Viewmodel.Name = "Viewmodel"
         Viewmodel.Parent = Items["Viewport"].Instance
 
         for _, Object in ipairs(Model:GetDescendants()) do
-            local Clone = self:AddObject(Object)
-            if Clone then
+            if ValidClasses[Object.ClassName] then
+                local Clone = Object:Clone()
                 Clone.Parent = Viewmodel
+                if Object:IsA("BasePart") then
+                    RenderObjects[Object] = Clone
+                end
             end
         end
-
-        table.insert(Connections, Model.DescendantAdded:Connect(function(Object)
-            local Clone = self:AddObject(Object)
-            if Clone then
-                Clone.Parent = Viewmodel
-            end
-        end))
-
-        table.insert(Connections, Model.DescendantRemoving:Connect(function(Object)
-            self:RemoveObject(Object)
-        end))
     end
 
     Library:Connect(RunService.Heartbeat, function()
-        if not PreviewModel or not Items["ESPPreview"].Instance.Visible then
-            return
-        end
-
+        if not PreviewModel or not Items["ESPPreview"].Instance.Visible then return end
         local Root = PreviewModel:FindFirstChild("HumanoidRootPart")
-        if not Root then
-            return
-        end
+        if not Root then return end
 
         ViewportCamera.CFrame = CFrame.new(Root.CFrame:ToWorldSpace(OFFSET).Position, Root.Position)
 
         for Original, Clone in pairs(RenderObjects) do
             if Original and Original.Parent then
                 Clone.CFrame = Original.CFrame
-            else
-                Preview:RemoveObject(Original)
             end
         end
     end)
@@ -2392,12 +2272,9 @@ local Library do
         Preview:BuildFromModel(NewCharacter)
     end)
 
-    Library:RegisterLayout("ESPPreview", {
-        Instance = Items["ESPPreview"].Instance
-    })
-
     return Preview
 end
+
 
         Library.Notification = function(self, Data)
             local Items = { } do 
